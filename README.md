@@ -34,15 +34,46 @@ GitHub (main push)
 
 ## 🛠️ セットアップ
 
-詳細なセットアップ手順は [SETUP.md](SETUP.md) を参照してください。
+### 前提条件
 
-### クイックスタート
+- AWS アカウント
+- GitHub アカウント
+- AWS CLI がインストール済み
+- 既存のECS環境（クラスター、サービス、ALBなど）
 
-1. GitHubで新しいリポジトリを作成
-2. AWS OIDC認証をセットアップ（[SETUP.md](SETUP.md)参照）
-3. GitHub Secretsを設定:
-   - `AWS_ACCOUNT_ID` - あなたのAWSアカウントID
-4. リポジトリをクローン/フォークしてプッシュ:
+### セットアップ手順
+
+#### 1. OIDC認証の設定
+
+CloudFormationスタックをデプロイしてGitHub Actions用のOIDC認証を設定：
+
+```bash
+aws cloudformation create-stack \
+  --stack-name github-oidc-setup \
+  --template-body file://.aws/github-oidc-setup.yml \
+  --parameters \
+    ParameterKey=GitHubOrg,ParameterValue=YOUR_GITHUB_USERNAME \
+    ParameterKey=GitHubRepo,ParameterValue=YOUR_REPO_NAME \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --region ap-northeast-1
+```
+
+#### 2. GitHub Secretsの設定
+
+リポジトリの **Settings > Secrets and variables > Actions** で以下を追加：
+
+| Secret名 | 値 |
+|---------|-----|
+| `AWS_ACCOUNT_ID` | あなたの12桁のAWSアカウントID |
+
+AWSアカウントIDの確認：
+```bash
+aws sts get-caller-identity --query Account --output text
+```
+
+#### 3. リポジトリをクローン/フォーク
+
+このリポジトリをフォークまたはクローンして使用：
 ```bash
 git clone https://github.com/YOUR_USERNAME/dotnet-blazor-ecs.git
 cd dotnet-blazor-ecs
@@ -115,7 +146,6 @@ dotnet/
 │   └── trust-policy.json       # IAM信頼ポリシー
 ├── Dockerfile                  # Dockerビルド設定
 ├── docker-compose.yml          # ローカル開発用
-├── SETUP.md                    # セットアップガイド
 └── README.md                   # このファイル
 ```
 
@@ -166,7 +196,8 @@ aws elbv2 describe-target-health --target-group-arn <TARGET_GROUP_ARN>
 
 - **Actions**タブでログを確認
 - AWS認証情報が正しく設定されているか確認
-- IAMユーザーに必要な権限があるか確認 (詳細はSETUP.md参照)
+- GitHub SecretでAWS_ACCOUNT_IDが正しく設定されているか確認
+- CloudFormationスタックが正常に作成されているか確認
 
 ## 🔐 セキュリティ
 
