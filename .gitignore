@@ -1,0 +1,15 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.log
+
+## Visual Studio
+.vs/
+*.vsidx
+*.vssscc
+
+## Rider
+.idea/
