@@ -13,3 +13,10 @@ obj/
 
 ## Rider
 .idea/
+
+## AWS Sensitive Files
+*.ps1
+.aws/iam-policy.json
+
+## Claude Code
+.claude/
