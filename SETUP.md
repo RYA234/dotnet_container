@@ -23,8 +23,8 @@ aws cloudformation create-stack `
   --stack-name github-oidc-setup `
   --template-body file://.aws/github-oidc-setup.yml `
   --parameters `
-    ParameterKey=GitHubOrg,ParameterValue=RYA234 `
-    ParameterKey=GitHubRepo,ParameterValue=dotnet_container `
+    ParameterKey=GitHubOrg,ParameterValue=YOUR_GITHUB_USERNAME `
+    ParameterKey=GitHubRepo,ParameterValue=YOUR_REPO_NAME `
   --capabilities CAPABILITY_NAMED_IAM `
   --region ap-northeast-1
 
@@ -47,7 +47,7 @@ aws cloudformation describe-stacks `
 
 出力されたIAM RoleのARNをメモしてください。形式は以下のようになります:
 ```
-arn:aws:iam::110221759530:role/GitHubActionsRole
+arn:aws:iam::YOUR_AWS_ACCOUNT_ID:role/GitHubActionsRole
 ```
 
 ## 3. GitHub Secretsの設定
@@ -58,14 +58,15 @@ GitHubリポジトリの **Settings > Secrets and variables > Actions** で以�
 
 | Secret名 | 値 | 説明 |
 |---------|-----|------|
-| `AWS_ACCOUNT_ID` | `110221759530` | あなたのAWSアカウントID |
+| `AWS_ACCOUNT_ID` | `123456789012` | あなたのAWSアカウントID（12桁の数字） |
 
 **注意**: アクセスキーやシークレットキーは不要です！OIDC方式では一時的な認証情報が自動的に発行されます。
 
-### AWS情報 (確認用):
+### AWS情報 (デフォルト設定):
+
+これらの値は [.github/workflows/deploy.yml](.github/workflows/deploy.yml) で設定されています。必要に応じて変更してください。
 
 ```
-AWS Account ID: 110221759530
 AWS Region: ap-northeast-1
 ECR Repository: dotnet-blazor-app
 ECS Cluster: app-cluster
@@ -81,7 +82,7 @@ Container Name: web
 git init
 
 # リモートリポジトリを追加
-git remote add origin https://github.com/RYA234/dotnet_container.git
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
 
 # ファイルを追加
 git add .
@@ -102,10 +103,12 @@ git push -u origin main
 
 ## 6. アクセス確認
 
-デプロイ後、以下のURLでアクセス:
+デプロイ後、Application Load BalancerのDNS名でアクセスできます:
 ```
-https://rya234.com/dotnet
+http://your-alb-dns-name.ap-northeast-1.elb.amazonaws.com/dotnet
 ```
+
+独自ドメインを設定している場合は、Route 53でAレコードを作成してください。
 
 ## トラブルシューティング
 
@@ -146,18 +149,23 @@ http://localhost:5000/dotnet
 ## 手動デプロイ (緊急時)
 
 ```powershell
+# 環境変数を設定
+$AWS_ACCOUNT_ID = "YOUR_AWS_ACCOUNT_ID"
+$AWS_REGION = "ap-northeast-1"
+$ECR_REPOSITORY = "dotnet-blazor-app"
+
 # ECRにログイン
-aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin 110221759530.dkr.ecr.ap-northeast-1.amazonaws.com
+aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
 # イメージをビルド
-docker build -t dotnet-blazor-app .
+docker build -t $ECR_REPOSITORY .
 
 # タグ付け
-docker tag dotnet-blazor-app:latest 110221759530.dkr.ecr.ap-northeast-1.amazonaws.com/dotnet-blazor-app:latest
+docker tag "${ECR_REPOSITORY}:latest" "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/${ECR_REPOSITORY}:latest"
 
 # プッシュ
-docker push 110221759530.dkr.ecr.ap-northeast-1.amazonaws.com/dotnet-blazor-app:latest
+docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/${ECR_REPOSITORY}:latest"
 
 # ECSサービスを強制更新
-aws ecs update-service --cluster app-cluster --service dotnet-service --force-new-deployment
+aws ecs update-service --cluster app-cluster --service dotnet-service --force-new-deployment --region $AWS_REGION
 ```

@@ -39,18 +39,20 @@ GitHub (main push)
 ### クイックスタート
 
 1. GitHubで新しいリポジトリを作成
-2. GitHub Secretsを設定:
-   - `AWS_ACCESS_KEY_ID`
-   - `AWS_SECRET_ACCESS_KEY`
-3. このフォルダをプッシュ:
+2. AWS OIDC認証をセットアップ（[SETUP.md](SETUP.md)参照）
+3. GitHub Secretsを設定:
+   - `AWS_ACCOUNT_ID` - あなたのAWSアカウントID
+4. リポジトリをクローン/フォークしてプッシュ:
 ```bash
-git init
-git remote add origin https://github.com/YOUR_USERNAME/dotnet-blazor-ecs.git
+git clone https://github.com/YOUR_USERNAME/dotnet-blazor-ecs.git
+cd dotnet-blazor-ecs
+# 必要に応じてカスタマイズ
 git add .
-git commit -m "Initial commit"
-git branch -M main
-git push -u origin main
+git commit -m "Customize settings"
+git push origin main
 ```
+
+**セキュリティ認証**: このプロジェクトはOIDC方式を使用しているため、AWSアクセスキーの保存は不要です。
 
 ## 💻 ローカル開発
 
@@ -86,7 +88,9 @@ GitHub Actionsのワークフローが:
 
 ## 🌐 アクセス
 
-**本番環境**: https://rya234.com/dotnet
+**本番環境サンプル**: https://rya234.com/dotnet
+
+（あなたの環境では、ALBのDNS名または独自ドメインでアクセスできます）
 
 ## 📁 プロジェクト構造
 
@@ -105,9 +109,12 @@ dotnet/
 ├── App.razor                   # ルーター設定
 ├── Program.cs                  # エントリーポイント
 ├── BlazorApp.csproj            # プロジェクトファイル
+├── .aws/
+│   ├── github-oidc-setup.yml   # OIDC CloudFormationテンプレート
+│   ├── task-definition.json    # ECSタスク定義
+│   └── trust-policy.json       # IAM信頼ポリシー
 ├── Dockerfile                  # Dockerビルド設定
 ├── docker-compose.yml          # ローカル開発用
-├── push-to-ecr.ps1             # 手動デプロイスクリプト
 ├── SETUP.md                    # セットアップガイド
 └── README.md                   # このファイル
 ```
@@ -161,6 +168,27 @@ aws elbv2 describe-target-health --target-group-arn <TARGET_GROUP_ARN>
 - AWS認証情報が正しく設定されているか確認
 - IAMユーザーに必要な権限があるか確認 (詳細はSETUP.md参照)
 
+## 🔐 セキュリティ
+
+このプロジェクトでは以下のセキュリティベストプラクティスを採用しています：
+
+- **OIDC認証**: AWSアクセスキーを保存せず、一時的な認証情報を使用
+- **最小権限の原則**: IAMロールは必要最小限の権限のみを付与
+- **機密情報の保護**: `.gitignore`で機密ファイルを除外
+- **HTTPS通信**: ACM証明書によるSSL/TLS暗号化
+
+## 🎯 技術スタック
+
+- **フロントエンド**: Blazor Server (C#)
+- **バックエンド**: ASP.NET Core 8.0
+- **コンテナ**: Docker + Docker Compose
+- **インフラ**: AWS ECS Fargate
+- **CI/CD**: GitHub Actions (OIDC認証)
+- **レジストリ**: Amazon ECR
+- **ロードバランサー**: Application Load Balancer
+- **証明書**: AWS Certificate Manager
+- **ログ**: CloudWatch Logs
+
 ## 📝 ライセンス
 
 MIT License
@@ -174,3 +202,4 @@ RYA234
 - [インフラリポジトリ](https://github.com/RYA234/my_web_infra)
 - [AWS ECS Documentation](https://docs.aws.amazon.com/ecs/)
 - [Blazor Documentation](https://docs.microsoft.com/aspnet/core/blazor/)
+- [GitHub Actions OIDC](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services)
