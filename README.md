@@ -36,54 +36,31 @@ GitHub (main push)
 
 ### 前提条件
 
-- AWS アカウント
-- GitHub アカウント
-- AWS CLI がインストール済み
-- 既存のECS環境（クラスター、サービス、ALBなど）
+- AWS インフラが構築済み（[インフラリポジトリ](https://github.com/RYA234/my_web_infra)参照）
+  - ECSクラスター、サービス
+  - ECRリポジトリ
+  - ALB、ターゲットグループ
+  - OIDC認証済みのGitHubActionsRole
+- GitHub Secretsに `AWS_ACCOUNT_ID` が設定済み
 
-### セットアップ手順
+### デプロイ手順
 
-#### 1. OIDC認証の設定
+このリポジトリは**アプリケーションコード専用**です。インフラ構築は[インフラリポジトリ](https://github.com/RYA234/my_web_infra)で管理されています。
 
-CloudFormationスタックをデプロイしてGitHub Actions用のOIDC認証を設定：
+1. このリポジトリをフォークまたはクローン
+2. アプリケーションコードをカスタマイズ
+3. `main`ブランチにプッシュすると自動デプロイ
 
 ```bash
-aws cloudformation create-stack \
-  --stack-name github-oidc-setup \
-  --template-body file://.aws/github-oidc-setup.yml \
-  --parameters \
-    ParameterKey=GitHubOrg,ParameterValue=YOUR_GITHUB_USERNAME \
-    ParameterKey=GitHubRepo,ParameterValue=YOUR_REPO_NAME \
-  --capabilities CAPABILITY_NAMED_IAM \
-  --region ap-northeast-1
-```
-
-#### 2. GitHub Secretsの設定
-
-リポジトリの **Settings > Secrets and variables > Actions** で以下を追加：
-
-| Secret名 | 値 |
-|---------|-----|
-| `AWS_ACCOUNT_ID` | あなたの12桁のAWSアカウントID |
-
-AWSアカウントIDの確認：
-```bash
-aws sts get-caller-identity --query Account --output text
-```
-
-#### 3. リポジトリをクローン/フォーク
-
-このリポジトリをフォークまたはクローンして使用：
-```bash
-git clone https://github.com/YOUR_USERNAME/dotnet-blazor-ecs.git
-cd dotnet-blazor-ecs
-# 必要に応じてカスタマイズ
+git clone https://github.com/YOUR_USERNAME/dotnet_container.git
+cd dotnet_container
+# コードを編集
 git add .
-git commit -m "Customize settings"
+git commit -m "Update application"
 git push origin main
 ```
 
-**セキュリティ認証**: このプロジェクトはOIDC方式を使用しているため、AWSアクセスキーの保存は不要です。
+GitHub Actionsが自動的にビルド→ECRプッシュ→ECSデプロイを実行します。
 
 ## 💻 ローカル開発
 
@@ -140,10 +117,6 @@ dotnet/
 ├── App.razor                   # ルーター設定
 ├── Program.cs                  # エントリーポイント
 ├── BlazorApp.csproj            # プロジェクトファイル
-├── .aws/
-│   ├── github-oidc-setup.yml   # OIDC CloudFormationテンプレート
-│   ├── task-definition.json    # ECSタスク定義
-│   └── trust-policy.json       # IAM信頼ポリシー
 ├── Dockerfile                  # Dockerビルド設定
 ├── docker-compose.yml          # ローカル開発用
 └── README.md                   # このファイル
@@ -195,9 +168,9 @@ aws elbv2 describe-target-health --target-group-arn <TARGET_GROUP_ARN>
 ### GitHub Actionsが失敗する
 
 - **Actions**タブでログを確認
-- AWS認証情報が正しく設定されているか確認
 - GitHub SecretでAWS_ACCOUNT_IDが正しく設定されているか確認
-- CloudFormationスタックが正常に作成されているか確認
+- GitHubActionsRoleの信頼ポリシーにリポジトリが含まれているか確認
+- ECS/ECRリソースが正しくセットアップされているか確認（[インフラリポジトリ](https://github.com/RYA234/my_web_infra)参照）
 
 ## 🔐 セキュリティ
 

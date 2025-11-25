@@ -28,6 +28,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ... existing deployment steps continue (release note generation moved to separate workflow)
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -67,3 +69,5 @@ jobs:
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
+
+      # Posting release notes is handled by a separate workflow: .github/workflows/release-post.yml
