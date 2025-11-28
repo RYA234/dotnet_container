@@ -80,31 +80,53 @@ dotnet run
 
 ## 🧪 テスト
 
-このプロジェクトはxUnitを使用した単体テストを含んでいます。
+このプロジェクトは単体テストとE2Eテストの両方を含んでいます。
 
-### テストの実行
+### 単体テストの実行
 
 ```bash
-# すべてのテストを実行
-dotnet test
+# すべての単体テストを実行
+dotnet test BlazorApp.Tests/
 
 # カバレッジレポートを生成
-dotnet test --collect:"XPlat Code Coverage"
+dotnet test BlazorApp.Tests/ --collect:"XPlat Code Coverage"
 
 # 詳細な出力でテストを実行
-dotnet test --verbosity detailed
+dotnet test BlazorApp.Tests/ --verbosity detailed
+```
+
+### E2Eテストの実行
+
+```bash
+# アプリケーションを起動
+docker-compose up -d
+
+# E2Eテストを実行
+dotnet test BlazorApp.E2ETests/
+
+# アプリケーションを停止
+docker-compose down
 ```
 
 ### テストプロジェクト
 
-- **BlazorApp.Tests**: xUnit、Moq、FluentAssertionsを使用した単体テスト
+#### 単体テスト (BlazorApp.Tests)
+- **フレームワーク**: xUnit、Moq、FluentAssertions
 - **サンプルテスト**:
   - `CalculatorServiceTests`: xUnitとFluentAssertionsの使用例
   - `OrderServiceTests`: Moqを使ったモッキングの例
 
+#### E2Eテスト (BlazorApp.E2ETests)
+- **フレームワーク**: Playwright for .NET、NUnit
+- **サンプルテスト**:
+  - `HomePageTests`: ページの読み込み、コンテンツ表示、レスポンシブデザインのテスト
+  - `AccessibilityTests`: アクセシビリティ、パフォーマンス、ブラウザ互換性のテスト
+
 ### CI/CD統合
 
-- プルリクエスト作成時に自動テスト実行 (`.github/workflows/test.yml`)
+- プルリクエスト作成時に自動テスト実行
+  - `.github/workflows/test.yml`: 単体テスト
+  - `.github/workflows/e2e-test.yml`: E2Eテスト
 - mainブランチへのプッシュ前にテスト実行 (`.github/workflows/deploy.yml`)
 - テストカバレッジレポートの自動生成
 
@@ -137,11 +159,15 @@ dotnet/
 ├── .github/
 │   └── workflows/
 │       ├── deploy.yml          # デプロイワークフロー
-│       └── test.yml            # テストワークフロー
-├── BlazorApp.Tests/            # テストプロジェクト
+│       ├── test.yml            # 単体テストワークフロー
+│       └── e2e-test.yml        # E2Eテストワークフロー
+├── BlazorApp.Tests/            # 単体テストプロジェクト
 │   └── Services/
 │       ├── CalculatorServiceTests.cs  # xUnit + FluentAssertions
 │       └── OrderServiceTests.cs       # xUnit + Moq
+├── BlazorApp.E2ETests/         # E2Eテストプロジェクト
+│   ├── HomePageTests.cs        # ホームページのE2Eテスト
+│   └── AccessibilityTests.cs   # アクセシビリティテスト
 ├── Pages/
 │   ├── Index.razor             # メインページ
 │   ├── _Host.cshtml            # ホストページ
@@ -224,7 +250,8 @@ aws elbv2 describe-target-health --target-group-arn <TARGET_GROUP_ARN>
 
 - **フロントエンド**: Blazor Server (C#)
 - **バックエンド**: ASP.NET Core 8.0
-- **テスト**: xUnit, Moq, FluentAssertions, Coverlet
+- **単体テスト**: xUnit, Moq, FluentAssertions, Coverlet
+- **E2Eテスト**: Playwright for .NET, NUnit
 - **コンテナ**: Docker + Docker Compose
 - **インフラ**: AWS ECS Fargate
 - **CI/CD**: GitHub Actions (OIDC認証)

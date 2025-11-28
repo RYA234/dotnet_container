@@ -13,6 +13,11 @@ TestResults/
 *.coveragexml
 coverage.cobertura.xml
 
+## Playwright
+screenshots/
+test-results/
+playwright-report/
+
 ## Visual Studio
 .vs/
 *.vsidx

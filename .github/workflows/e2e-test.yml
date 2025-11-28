@@ -1,0 +1,81 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+  push:
+    branches:
+      - main
+      - master
+      - 'feature/**'
+  workflow_dispatch:
+
+jobs:
+  e2e-test:
+    name: E2E Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore dotnet_container.sln
+
+      - name: Build solution
+        run: dotnet build dotnet_container.sln --no-restore --configuration Release
+
+      - name: Start application with Docker Compose
+        run: docker-compose up -d --build
+
+      - name: Wait for application to be ready
+        run: |
+          echo "Waiting for application to start..."
+          timeout 60 bash -c 'until curl -f http://localhost:5000/dotnet > /dev/null 2>&1; do sleep 2; done' || echo "Application may not be fully ready"
+          sleep 5
+
+      - name: Install Playwright browsers
+        run: |
+          dotnet build BlazorApp.E2ETests/BlazorApp.E2ETests.csproj
+          pwsh BlazorApp.E2ETests/bin/Release/net10.0/playwright.ps1 install --with-deps
+
+      - name: Run E2E tests
+        run: dotnet test BlazorApp.E2ETests/BlazorApp.E2ETests.csproj --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=e2e-test-results.trx"
+        continue-on-error: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results
+          path: '**/e2e-test-results.trx'
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-screenshots
+          path: screenshots/
+
+      - name: Stop application
+        if: always()
+        run: docker-compose down
+
+      - name: Test Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: E2E Test Results
+          path: '**/e2e-test-results.trx'
+          reporter: dotnet-trx
