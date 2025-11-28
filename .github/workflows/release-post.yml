@@ -1,0 +1,105 @@
+name: Release Notes & Post
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release_and_post:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch tags
+        run: |
+          git fetch --tags --prune
+
+      - name: Determine next version
+        id: version
+        run: |
+          set -e
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+
+          # Extract version numbers
+          VERSION=${LATEST_TAG#v}
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+
+          # Increment patch version
+          PATCH=$((PATCH + 1))
+          NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          set -e
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          if [ -n "$LATEST_TAG" ]; then
+            echo "Found latest tag: $LATEST_TAG"
+            git log ${LATEST_TAG}..HEAD --pretty=format:"- %s (%h)" > release-notes.md || true
+          else
+            echo "No tags found, using full history"
+            git log --pretty=format:"- %s (%h)" > release-notes.md || true
+          fi
+
+          # Add header with version
+          echo "# Release ${{ steps.version.outputs.version }}" > temp-notes.md
+          echo "" >> temp-notes.md
+          echo "## Changes" >> temp-notes.md
+          cat release-notes.md >> temp-notes.md
+          mv temp-notes.md release-notes.md
+
+          echo "Generated release-notes.md"
+
+      - name: Show release notes
+        run: |
+          echo '--- Release Notes ---'
+          if [ -f release-notes.md ]; then cat release-notes.md; else echo '(no release notes)'; fi
+          echo '---------------------'
+
+      - name: Create Git Tag
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
+          git push origin "${{ steps.version.outputs.version }}"
+
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.version.outputs.version }}" \
+            --title "Release ${{ steps.version.outputs.version }}" \
+            --notes-file release-notes.md
+
+      - name: Install dependencies for SNS posting
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq curl
+
+      - name: Post release notes to SNS (Slack / X / Qiita)
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+          QIITA_TOKEN: ${{ secrets.QIITA_TOKEN }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          chmod +x .github/scripts/post-release.sh
+          .github/scripts/post-release.sh release-notes.md
