@@ -8,8 +8,11 @@
 
   <ItemGroup>
     <Compile Remove="BlazorApp.Tests/**" />
+    <Compile Remove="BlazorApp.E2ETests/**" />
     <EmbeddedResource Remove="BlazorApp.Tests/**" />
+    <EmbeddedResource Remove="BlazorApp.E2ETests/**" />
     <None Remove="BlazorApp.Tests/**" />
+    <None Remove="BlazorApp.E2ETests/**" />
   </ItemGroup>
 
 </Project>
