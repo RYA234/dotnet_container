@@ -40,7 +40,7 @@ jobs:
         run: dotnet build dotnet_container.sln --no-restore
 
       - name: Run tests
-        run: dotnet test dotnet_container.sln --no-build --verbosity normal --collect:"XPlat Code Coverage"
+        run: dotnet test BlazorApp.Tests/BlazorApp.Tests.csproj --no-build --verbosity normal --collect:"XPlat Code Coverage"
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4

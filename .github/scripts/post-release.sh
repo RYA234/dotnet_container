@@ -21,10 +21,11 @@ fi
 # Post to X (Twitter) via v2 endpoint - requires OAuth2 user context token with write access
 if [ -n "${X_BEARER_TOKEN:-}" ]; then
   echo "Posting to X..."
+  x_payload=$(jq -nc --arg text "${TWEET_TEXT}" '{text:$text}')
   curl -s -X POST "https://api.twitter.com/2/tweets" \
     -H "Authorization: Bearer ${X_BEARER_TOKEN}" \
     -H "Content-Type: application/json" \
-    -d "{\"text\": \"${TWEET_TEXT//"/\"}\"}" || echo "X post failed"
+    -d "${x_payload}" || echo "X post failed"
 else
   echo "X_BEARER_TOKEN not set; skipping X"
 fi
