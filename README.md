@@ -78,6 +78,36 @@ docker-compose up --build
 dotnet run
 ```
 
+## 🧪 テスト
+
+このプロジェクトはxUnitを使用した単体テストを含んでいます。
+
+### テストの実行
+
+```bash
+# すべてのテストを実行
+dotnet test
+
+# カバレッジレポートを生成
+dotnet test --collect:"XPlat Code Coverage"
+
+# 詳細な出力でテストを実行
+dotnet test --verbosity detailed
+```
+
+### テストプロジェクト
+
+- **BlazorApp.Tests**: xUnit、Moq、FluentAssertionsを使用した単体テスト
+- **サンプルテスト**:
+  - `CalculatorServiceTests`: xUnitとFluentAssertionsの使用例
+  - `OrderServiceTests`: Moqを使ったモッキングの例
+
+### CI/CD統合
+
+- プルリクエスト作成時に自動テスト実行 (`.github/workflows/test.yml`)
+- mainブランチへのプッシュ前にテスト実行 (`.github/workflows/deploy.yml`)
+- テストカバレッジレポートの自動生成
+
 ## 🔄 デプロイ
 
 mainブランチにプッシュすると自動的にデプロイされます:
@@ -106,17 +136,26 @@ GitHub Actionsのワークフローが:
 dotnet/
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml          # GitHub Actionsワークフロー
+│       ├── deploy.yml          # デプロイワークフロー
+│       └── test.yml            # テストワークフロー
+├── BlazorApp.Tests/            # テストプロジェクト
+│   └── Services/
+│       ├── CalculatorServiceTests.cs  # xUnit + FluentAssertions
+│       └── OrderServiceTests.cs       # xUnit + Moq
 ├── Pages/
 │   ├── Index.razor             # メインページ
 │   ├── _Host.cshtml            # ホストページ
 │   └── _Imports.razor          # インポート設定
+├── Services/                   # ビジネスロジック
+│   ├── CalculatorService.cs    # 計算サービス
+│   └── OrderService.cs         # 注文処理サービス
 ├── wwwroot/
 │   └── css/
 │       └── site.css            # スタイルシート
 ├── App.razor                   # ルーター設定
 ├── Program.cs                  # エントリーポイント
-├── BlazorApp.csproj            # プロジェクトファイル
+├── BlazorApp.csproj            # メインプロジェクトファイル
+├── dotnet_container.sln        # ソリューションファイル
 ├── Dockerfile                  # Dockerビルド設定
 ├── docker-compose.yml          # ローカル開発用
 └── README.md                   # このファイル
@@ -185,6 +224,7 @@ aws elbv2 describe-target-health --target-group-arn <TARGET_GROUP_ARN>
 
 - **フロントエンド**: Blazor Server (C#)
 - **バックエンド**: ASP.NET Core 8.0
+- **テスト**: xUnit, Moq, FluentAssertions, Coverlet
 - **コンテナ**: Docker + Docker Compose
 - **インフラ**: AWS ECS Fargate
 - **CI/CD**: GitHub Actions (OIDC認証)

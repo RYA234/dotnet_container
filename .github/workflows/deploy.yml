@@ -28,6 +28,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore dotnet_container.sln
+
+      - name: Build
+        run: dotnet build dotnet_container.sln --no-restore
+
+      - name: Run tests
+        run: dotnet test dotnet_container.sln --no-build --verbosity normal --collect:"XPlat Code Coverage"
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: '**/coverage.cobertura.xml'
+          fail_ci_if_error: false
+
       # ... existing deployment steps continue (release note generation moved to separate workflow)
 
       - name: Configure AWS credentials (OIDC)

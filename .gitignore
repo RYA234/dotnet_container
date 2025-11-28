@@ -6,6 +6,13 @@ obj/
 *.cache
 *.log
 
+## Test Results
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage.cobertura.xml
+
 ## Visual Studio
 .vs/
 *.vsidx

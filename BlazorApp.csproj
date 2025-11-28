@@ -6,4 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="BlazorApp.Tests/**" />
+    <EmbeddedResource Remove="BlazorApp.Tests/**" />
+    <None Remove="BlazorApp.Tests/**" />
+  </ItemGroup>
+
 </Project>
