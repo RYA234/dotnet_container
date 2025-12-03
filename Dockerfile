@@ -3,13 +3,13 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copy csproj and restore dependencies
-COPY ["BlazorApp.csproj", "./"]
-RUN dotnet restore "BlazorApp.csproj"
+COPY ["src/BlazorApp/BlazorApp.csproj", "src/BlazorApp/"]
+RUN dotnet restore "src/BlazorApp/BlazorApp.csproj"
 
 # Copy everything else and build
 COPY . .
-RUN dotnet build "BlazorApp.csproj" -c Release -o /app/build
-RUN dotnet publish "BlazorApp.csproj" -c Release -o /app/publish
+RUN dotnet build "src/BlazorApp/BlazorApp.csproj" -c Release -o /app/build
+RUN dotnet publish "src/BlazorApp/BlazorApp.csproj" -c Release -o /app/publish
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0

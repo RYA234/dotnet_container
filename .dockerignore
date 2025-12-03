@@ -1,0 +1,26 @@
+# Build outputs
+**/bin/
+**/obj/
+**/TestResults/
+
+# IDE / tooling
+.vscode/
+.vs/
+**/*.user
+**/*.suo
+**/*.swp
+
+# Git
+.git/
+.gitignore
+
+# Playwright artifacts
+**/screenshots/
+**/playwright-report/
+
+# Local caches/logs
+**/*.log
+
+# Exclude local test projects from Docker context
+BlazorApp.Tests/
+BlazorApp.E2ETests/

@@ -66,16 +66,22 @@ GitHub Actionsが自動的にビルド→ECRプッシュ→ECSデプロイを実
 
 ### Docker Composeで起動
 
-```bash
-docker-compose up --build
+```powershell
+docker compose up -d --build
 ```
 
-ブラウザで http://localhost:5000/dotnet にアクセス
+ブラウザ: http://localhost:5000/dotnet
+
+停止:
+
+```powershell
+docker compose down
+```
 
 ### .NET SDKで起動
 
-```bash
-dotnet run
+```powershell
+dotnet run --project "src\BlazorApp\BlazorApp.csproj"
 ```
 
 ## 🧪 テスト
@@ -155,36 +161,42 @@ GitHub Actionsのワークフローが:
 ## 📁 プロジェクト構造
 
 ```
-dotnet/
-├── .github/
-│   └── workflows/
-│       ├── deploy.yml          # デプロイワークフロー
-│       ├── test.yml            # 単体テストワークフロー
-│       └── e2e-test.yml        # E2Eテストワークフロー
-├── BlazorApp.Tests/            # 単体テストプロジェクト
+/
+├── src/
+│   └── BlazorApp/
+│       ├── Features/
+│       │   ├── Calculator/
+│       │   │   ├── CalculatorService.cs
+│       │   │   └── Pages/
+│       │   │       └── Index.razor       # /calculator
+│       │   └── Orders/
+│       │       ├── OrderService.cs
+│       │       ├── PricingService.cs
+│       │       └── Pages/
+│       │           └── Index.razor       # /orders
+│       ├── Pages/
+│       │   ├── Index.razor               # トップ（/dotnet）
+│       │   ├── _Host.cshtml
+│       │   └── _Imports.razor
+│       ├── wwwroot/
+│       │   └── css/site.css
+│       ├── App.razor
+│       ├── Program.cs
+│       └── BlazorApp.csproj
+├── BlazorApp.Tests/
 │   └── Services/
-│       ├── CalculatorServiceTests.cs  # xUnit + FluentAssertions
-│       └── OrderServiceTests.cs       # xUnit + Moq
-├── BlazorApp.E2ETests/         # E2Eテストプロジェクト
-│   ├── HomePageTests.cs        # ホームページのE2Eテスト
-│   └── AccessibilityTests.cs   # アクセシビリティテスト
-├── Pages/
-│   ├── Index.razor             # メインページ
-│   ├── _Host.cshtml            # ホストページ
-│   └── _Imports.razor          # インポート設定
-├── Services/                   # ビジネスロジック
-│   ├── CalculatorService.cs    # 計算サービス
-│   └── OrderService.cs         # 注文処理サービス
-├── wwwroot/
-│   └── css/
-│       └── site.css            # スタイルシート
-├── App.razor                   # ルーター設定
-├── Program.cs                  # エントリーポイント
-├── BlazorApp.csproj            # メインプロジェクトファイル
-├── dotnet_container.sln        # ソリューションファイル
-├── Dockerfile                  # Dockerビルド設定
-├── docker-compose.yml          # ローカル開発用
-└── README.md                   # このファイル
+│       ├── CalculatorServiceTests.cs
+│       └── OrderServiceTests.cs
+├── BlazorApp.E2ETests/
+│   ├── HomePageTests.cs
+│   ├── AccessibilityTests.cs
+│   ├── CalculatorPageTests.cs
+│   └── OrdersPageTests.cs
+├── Dockerfile
+├── docker-compose.yml
+├── .dockerignore
+├── dotnet_container.sln
+└── README.md
 ```
 
 ## 🔧 設定
@@ -203,6 +215,15 @@ app.UsePathBase("/dotnet");
 ```csharp
 // Program.cs (環境変数で設定)
 ENV ASPNETCORE_URLS=http://+:5000
+```
+
+### ヘルスチェック（ALB向け）
+
+ターゲットグループのヘルスチェックパスに `/dotnet/healthz` を設定してください。
+
+```csharp
+// Program.cs
+app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }));
 ```
 
 ## 📊 監視
