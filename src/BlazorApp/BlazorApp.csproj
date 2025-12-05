@@ -15,4 +15,10 @@
     <None Remove="BlazorApp.E2ETests/**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.SecretsManager" Version="4.0.3.2" />
+    <PackageReference Include="DotNetEnv" Version="3.1.1" />
+    <PackageReference Include="supabase-csharp" Version="0.16.2" />
+  </ItemGroup>
+
 </Project>

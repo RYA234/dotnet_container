@@ -64,6 +64,21 @@ GitHub Actionsが自動的にビルド→ECRプッシュ→ECSデプロイを実
 
 ## 💻 ローカル開発
 
+### 環境変数の設定
+
+1. `.env.example`をコピーして`.env`を作成:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+2. `.env`ファイルを編集してSupabaseの設定を追加:
+
+```ini
+Supabase__Url=https://your-project.supabase.co
+Supabase__AnonKey=your-anon-key-here
+```
+
 ### Docker Composeで起動
 
 ```powershell
@@ -83,6 +98,34 @@ docker compose down
 ```powershell
 dotnet run --project "src\BlazorApp\BlazorApp.csproj"
 ```
+
+### Supabase接続テスト
+
+アプリケーション起動後、以下のエンドポイントでSupabase接続を確認できます:
+
+http://localhost:5000/dotnet/supabase/test
+
+### AWS Secrets Manager統合（本番環境）
+
+本番環境（Production）では、環境変数の代わりにAWS Secrets Managerから自動的に認証情報を読み込みます。
+
+**必要な設定:**
+1. AWS Secrets Managerにシークレットを作成済み:
+   - シークレット名: `ecs/dotnet-container/supabase`
+   - 形式: `{"url":"https://...","anon_key":"..."}`
+
+2. ECSタスク実行ロールに権限を付与済み:
+   ```json
+   {
+     "Effect": "Allow",
+     "Action": ["secretsmanager:GetSecretValue"],
+     "Resource": "arn:aws:secretsmanager:ap-northeast-1:ACCOUNT_ID:secret:ecs/dotnet-container/*"
+   }
+   ```
+
+アプリケーションは環境に応じて自動的に設定を切り替えます:
+- **Development**: `.env`ファイルから読み込み
+- **Production**: AWS Secrets Managerから読み込み
 
 ## 🧪 テスト
 
