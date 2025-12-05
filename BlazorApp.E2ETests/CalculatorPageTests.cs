@@ -15,6 +15,9 @@ public class CalculatorPageTests : PageTest
     {
         await Page.GotoAsync($"{BaseUrl}/calculator");
 
+        // Wait for Blazor to initialize
+        await Page.WaitForSelectorAsync("h3:has-text('Calculator')");
+
         await Page.FillAsync("input[type=number] >> nth=0", "2");
         await Page.FillAsync("input[type=number] >> nth=1", "3");
         await Page.SelectOptionAsync("select", new[] { "+" });
@@ -27,6 +30,9 @@ public class CalculatorPageTests : PageTest
     public async Task CalculatorPage_DivideByZero_ShowsMessage()
     {
         await Page.GotoAsync($"{BaseUrl}/calculator");
+
+        // Wait for Blazor to initialize
+        await Page.WaitForSelectorAsync("h3:has-text('Calculator')");
 
         await Page.FillAsync("input[type=number] >> nth=0", "10");
         await Page.FillAsync("input[type=number] >> nth=1", "0");

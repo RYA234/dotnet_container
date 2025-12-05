@@ -15,6 +15,9 @@ public class OrdersPageTests : PageTest
     {
         await Page.GotoAsync($"{BaseUrl}/orders");
 
+        // Wait for Blazor to initialize
+        await Page.WaitForSelectorAsync("h3:has-text('Orders')");
+
         await Page.FillAsync("input[type=number]", "5");
         await Page.FillAsync("input:not([type])", "500");
         await Page.ClickAsync("button:has-text('計算')");
@@ -30,6 +33,9 @@ public class OrdersPageTests : PageTest
     public async Task OrdersPage_BulkDiscount_Applies()
     {
         await Page.GotoAsync($"{BaseUrl}/orders");
+
+        // Wait for Blazor to initialize
+        await Page.WaitForSelectorAsync("h3:has-text('Orders')");
 
         await Page.FillAsync("input[type=number]", "10");
         await Page.FillAsync("input:not([type])", "1000");
