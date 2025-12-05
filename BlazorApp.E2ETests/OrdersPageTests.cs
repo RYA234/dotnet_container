@@ -29,7 +29,8 @@ public class OrdersPageTests : PageTest
         await button.ClickAsync();
 
         // 合計 2500, 割引は 0 （数量 5 < 10）
-        await Expect(Page.Locator("text=合計:")).ToBeVisibleAsync();
+        // Wait for the calculation result to appear
+        await Expect(Page.Locator("strong").Filter(new() { HasText = "2500" })).ToBeVisibleAsync();
         var page1 = await Page.ContentAsync();
         Assert.That(page1, Does.Contain("合計").And.Contain("2500"));
         Assert.That(page1, Does.Contain("割引後").And.Contain("2500"));
@@ -54,6 +55,9 @@ public class OrdersPageTests : PageTest
         await button.ClickAsync();
 
         // 合計 10000, 割引後は 9000（10% OFF）
+        // Wait for the calculation result to appear
+        await Expect(Page.Locator("strong").Filter(new() { HasText = "10000" })).ToBeVisibleAsync();
+        await Expect(Page.Locator("strong").Filter(new() { HasText = "9000" })).ToBeVisibleAsync();
         var pageContent = await Page.ContentAsync();
         Assert.That(pageContent, Does.Contain("10000"));
         Assert.That(pageContent, Does.Contain("9000"));
