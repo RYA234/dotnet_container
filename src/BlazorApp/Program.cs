@@ -1,22 +1,58 @@
 using DotNetEnv;
 using BlazorApp.Features.Supabase.Services;
+using Amazon.SecretsManager;
+using Amazon.SecretsManager.Model;
+using System.Text.Json;
 
-// Load environment variables from .env file in local development
-if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") != "Production")
+var builder = WebApplication.CreateBuilder(args);
+
+// Load configuration based on environment
+var environment = builder.Environment.EnvironmentName;
+
+if (environment == "Production")
 {
+    // Production: Load from AWS Secrets Manager
+    Console.WriteLine("Loading configuration from AWS Secrets Manager...");
+
+    try
+    {
+        using var client = new AmazonSecretsManagerClient(Amazon.RegionEndpoint.APNortheast1);
+
+        var supabaseSecretRequest = new GetSecretValueRequest
+        {
+            SecretId = "ecs/dotnet-container/supabase"
+        };
+
+        var supabaseSecretResponse = await client.GetSecretValueAsync(supabaseSecretRequest);
+        var supabaseSecret = JsonSerializer.Deserialize<Dictionary<string, string>>(supabaseSecretResponse.SecretString);
+
+        if (supabaseSecret != null)
+        {
+            Environment.SetEnvironmentVariable("Supabase__Url", supabaseSecret["url"]);
+            Environment.SetEnvironmentVariable("Supabase__AnonKey", supabaseSecret["anon_key"]);
+            Console.WriteLine("✓ Supabase configuration loaded from AWS Secrets Manager");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"⚠ Warning: Failed to load secrets from AWS Secrets Manager: {ex.Message}");
+        Console.WriteLine("Continuing with environment variables...");
+    }
+}
+else
+{
+    // Development: Load from .env file
     var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
     if (File.Exists(envPath))
     {
         Env.Load(envPath);
-        Console.WriteLine("Environment variables loaded from .env file");
+        Console.WriteLine("✓ Environment variables loaded from .env file");
     }
     else
     {
-        Console.WriteLine($".env file not found at: {envPath}");
+        Console.WriteLine($"⚠ .env file not found at: {envPath}");
     }
 }
-
-var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
