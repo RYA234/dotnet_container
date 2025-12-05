@@ -64,6 +64,21 @@ GitHub Actionsが自動的にビルド→ECRプッシュ→ECSデプロイを実
 
 ## 💻 ローカル開発
 
+### 環境変数の設定
+
+1. `.env.example`をコピーして`.env`を作成:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+2. `.env`ファイルを編集してSupabaseの設定を追加:
+
+```ini
+Supabase__Url=https://your-project.supabase.co
+Supabase__AnonKey=your-anon-key-here
+```
+
 ### Docker Composeで起動
 
 ```powershell
@@ -83,6 +98,12 @@ docker compose down
 ```powershell
 dotnet run --project "src\BlazorApp\BlazorApp.csproj"
 ```
+
+### Supabase接続テスト
+
+アプリケーション起動後、以下のエンドポイントでSupabase接続を確認できます:
+
+http://localhost:5000/dotnet/supabase/test
 
 ## 🧪 テスト
 

@@ -31,3 +31,7 @@ playwright-report/
 
 ## Claude Code
 .claude/
+
+## Environment Variables
+.env
+.env.local
