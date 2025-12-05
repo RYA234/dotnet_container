@@ -76,9 +76,6 @@ app.UsePathBase("/dotnet");
 app.UseStaticFiles();
 app.UseRouting();
 
-app.MapBlazorHub();
-app.MapFallbackToPage("/_Host");
-
 // Health check for ALB (will be served under /dotnet/healthz)
 app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }));
 
@@ -88,5 +85,8 @@ app.MapGet("/supabase/test", async (ISupabaseService supabaseService) =>
     var result = await supabaseService.TestConnectionAsync();
     return result.Success ? Results.Ok(result) : Results.Json(result, statusCode: 503);
 });
+
+app.MapBlazorHub();
+app.MapFallbackToPage("/_Host");
 
 app.Run();
