@@ -13,14 +13,20 @@ public class OrdersPageTests : PageTest
     [Test]
     public async Task OrdersPage_PriceCalculation_Works()
     {
-        await Page.GotoAsync($"{BaseUrl}/orders");
+        await Page.GotoAsync($"{BaseUrl}/orders", new() { WaitUntil = WaitUntilState.NetworkIdle });
 
-        // Wait for Blazor to initialize
+        // Wait for Blazor to initialize and inputs to be ready
         await Page.WaitForSelectorAsync("h3:has-text('Orders')");
+        await Page.WaitForSelectorAsync("input[type=number]");
+        await Page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
 
-        await Page.FillAsync("input[type=number]", "5");
-        await Page.FillAsync("input:not([type])", "500");
-        await Page.ClickAsync("button:has-text('計算')");
+        var quantityInput = Page.Locator("input[type=number]");
+        var priceInput = Page.Locator("input:not([type])");
+        var button = Page.Locator("button:has-text('計算')");
+
+        await quantityInput.FillAsync("5");
+        await priceInput.FillAsync("500");
+        await button.ClickAsync();
 
         // 合計 2500, 割引は 0 （数量 5 < 10）
         await Expect(Page.Locator("text=合計:")).ToBeVisibleAsync();
@@ -32,14 +38,20 @@ public class OrdersPageTests : PageTest
     [Test]
     public async Task OrdersPage_BulkDiscount_Applies()
     {
-        await Page.GotoAsync($"{BaseUrl}/orders");
+        await Page.GotoAsync($"{BaseUrl}/orders", new() { WaitUntil = WaitUntilState.NetworkIdle });
 
-        // Wait for Blazor to initialize
+        // Wait for Blazor to initialize and inputs to be ready
         await Page.WaitForSelectorAsync("h3:has-text('Orders')");
+        await Page.WaitForSelectorAsync("input[type=number]");
+        await Page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
 
-        await Page.FillAsync("input[type=number]", "10");
-        await Page.FillAsync("input:not([type])", "1000");
-        await Page.ClickAsync("button:has-text('計算')");
+        var quantityInput = Page.Locator("input[type=number]");
+        var priceInput = Page.Locator("input:not([type])");
+        var button = Page.Locator("button:has-text('計算')");
+
+        await quantityInput.FillAsync("10");
+        await priceInput.FillAsync("1000");
+        await button.ClickAsync();
 
         // 合計 10000, 割引後は 9000（10% OFF）
         var pageContent = await Page.ContentAsync();
