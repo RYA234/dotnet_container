@@ -16,15 +16,22 @@ if (environment == "Production")
 
     try
     {
+        Console.WriteLine("Creating AWS Secrets Manager client...");
         using var client = new AmazonSecretsManagerClient(Amazon.RegionEndpoint.APNortheast1);
+        Console.WriteLine("Client created successfully");
 
+        Console.WriteLine("Requesting secret: ecs/dotnet-container/supabase");
         var supabaseSecretRequest = new GetSecretValueRequest
         {
             SecretId = "ecs/dotnet-container/supabase"
         };
 
+        Console.WriteLine("Calling GetSecretValueAsync...");
         var supabaseSecretResponse = await client.GetSecretValueAsync(supabaseSecretRequest);
+        Console.WriteLine($"Secret retrieved, length: {supabaseSecretResponse.SecretString?.Length ?? 0}");
+
         var supabaseSecret = JsonSerializer.Deserialize<Dictionary<string, string>>(supabaseSecretResponse.SecretString);
+        Console.WriteLine($"Secret deserialized, keys: {string.Join(", ", supabaseSecret?.Keys ?? new string[0])}");
 
         if (supabaseSecret != null)
         {
@@ -35,7 +42,8 @@ if (environment == "Production")
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"⚠ Warning: Failed to load secrets from AWS Secrets Manager: {ex.Message}");
+        Console.WriteLine($"⚠ Warning: Failed to load secrets from AWS Secrets Manager: {ex.GetType().Name}: {ex.Message}");
+        Console.WriteLine($"Stack trace: {ex.StackTrace}");
         Console.WriteLine("Continuing with environment variables...");
     }
 }
