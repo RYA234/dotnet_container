@@ -31,7 +31,7 @@ if (environment == "Production")
         Console.WriteLine($"Secret retrieved, length: {supabaseSecretResponse.SecretString?.Length ?? 0}");
 
         var supabaseSecret = JsonSerializer.Deserialize<Dictionary<string, string>>(supabaseSecretResponse.SecretString);
-        Console.WriteLine($"Secret deserialized, keys: {string.Join(", ", supabaseSecret?.Keys ?? new string[0])}");
+        Console.WriteLine($"Secret deserialized, keys: {(supabaseSecret != null ? string.Join(", ", supabaseSecret.Keys) : "none")}");
 
         if (supabaseSecret != null)
         {
