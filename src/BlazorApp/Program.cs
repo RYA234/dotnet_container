@@ -35,9 +35,10 @@ if (environment == "Production")
 
         if (supabaseSecret != null)
         {
-            Environment.SetEnvironmentVariable("Supabase__Url", supabaseSecret["url"]);
-            Environment.SetEnvironmentVariable("Supabase__AnonKey", supabaseSecret["anon_key"]);
-            Console.WriteLine("✓ Supabase configuration loaded from AWS Secrets Manager");
+            // Add to configuration
+            builder.Configuration["Supabase:Url"] = supabaseSecret["url"];
+            builder.Configuration["Supabase:AnonKey"] = supabaseSecret["anon_key"];
+            Console.WriteLine($"✓ Supabase configuration loaded: Url={supabaseSecret["url"]}, KeyLength={supabaseSecret["anon_key"].Length}");
         }
     }
     catch (Exception ex)
