@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace BlazorApp.Controllers;
+namespace BlazorApp.Features.Home;
 
 public class HomeController : Controller
 {

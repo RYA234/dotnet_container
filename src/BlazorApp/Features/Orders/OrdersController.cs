@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using BlazorApp.Services;
 
-namespace BlazorApp.Controllers;
+namespace BlazorApp.Features.Orders;
 
 public class OrdersController : Controller
 {

@@ -204,33 +204,37 @@ GitHub Actionsのワークフローが:
 
 ## 📁 プロジェクト構造
 
+**機能ベース（Feature-Based）アーキテクチャを採用**
+各機能は独立したフォルダに、Controller/View/Serviceをまとめて配置します。
+
 ```
 /
 ├── src/
 │   └── BlazorApp/
-│       ├── Controllers/                  # MVCコントローラー
-│       │   ├── HomeController.cs
-│       │   ├── CalculatorController.cs
-│       │   └── OrdersController.cs
-│       ├── Views/                        # Razorビュー
+│       ├── Features/                     # 機能別フォルダ（機能ごとに完結）
 │       │   ├── Home/
-│       │   │   └── Index.cshtml          # トップ（/dotnet）
+│       │   │   ├── HomeController.cs
+│       │   │   └── Views/
+│       │   │       └── Index.cshtml      # トップ（/dotnet）
 │       │   ├── Calculator/
-│       │   │   └── Index.cshtml          # /calculator
+│       │   │   ├── CalculatorController.cs
+│       │   │   ├── CalculatorService.cs
+│       │   │   └── Views/
+│       │   │       └── Index.cshtml      # /calculator
 │       │   ├── Orders/
-│       │   │   └── Index.cshtml          # /orders
+│       │   │   ├── OrdersController.cs
+│       │   │   ├── OrderService.cs
+│       │   │   ├── PricingService.cs
+│       │   │   └── Views/
+│       │   │       └── Index.cshtml      # /orders
+│       │   └── Supabase/
+│       │       ├── SupabaseService.cs
+│       │       └── ISupabaseService.cs
+│       ├── Views/                        # 共有ビュー
 │       │   ├── Shared/
 │       │   │   └── _Layout.cshtml        # 共有レイアウト
 │       │   ├── _ViewStart.cshtml
 │       │   └── _ViewImports.cshtml
-│       ├── Features/                     # 機能別サービス
-│       │   ├── Calculator/
-│       │   │   └── CalculatorService.cs
-│       │   ├── Orders/
-│       │   │   ├── OrderService.cs
-│       │   │   └── PricingService.cs
-│       │   └── Supabase/
-│       │       └── SupabaseService.cs
 │       ├── wwwroot/
 │       │   └── css/site.css
 │       ├── Program.cs

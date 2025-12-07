@@ -15,30 +15,37 @@
 
 ## フォルダ構成
 
+**機能ベース（Feature-Based）アーキテクチャを採用しています。**
+各機能は独立したフォルダに、Controller/View/Serviceをまとめて配置します。
+
 ```
 /
 ├── src/
 │   └── BlazorApp/
-│       ├── Controllers/           # MVC コントローラー（リクエスト処理）
-│       │   ├── HomeController.cs
-│       │   ├── CalculatorController.cs
-│       │   └── OrdersController.cs
-│       ├── Views/                 # Razor ビュー（UI レイアウト）
+│       ├── Features/              # 機能別フォルダ（機能ごとに完結）
 │       │   ├── Home/
-│       │   │   └── Index.cshtml
+│       │   │   ├── HomeController.cs
+│       │   │   └── Views/
+│       │   │       └── Index.cshtml
 │       │   ├── Calculator/
-│       │   │   └── Index.cshtml
+│       │   │   ├── CalculatorController.cs
+│       │   │   ├── CalculatorService.cs      # ICalculatorServiceも含む
+│       │   │   └── Views/
+│       │   │       └── Index.cshtml
 │       │   ├── Orders/
-│       │   │   └── Index.cshtml
+│       │   │   ├── OrdersController.cs
+│       │   │   ├── OrderService.cs           # IOrderServiceも含む
+│       │   │   ├── PricingService.cs
+│       │   │   └── Views/
+│       │   │       └── Index.cshtml
+│       │   └── Supabase/
+│       │       ├── SupabaseService.cs
+│       │       └── ISupabaseService.cs
+│       ├── Views/                 # 共有ビュー
 │       │   ├── Shared/
 │       │   │   └── _Layout.cshtml
 │       │   ├── _ViewStart.cshtml
 │       │   └── _ViewImports.cshtml
-│       ├── Features/              # 機能別フォルダ（Services等）
-│       │   ├── Calculator/
-│       │   ├── Orders/
-│       │   └── Supabase/
-│       ├── Services/              # 共通サービス（ビジネスロジック）
 │       ├── wwwroot/               # 静的アセット
 │       ├── Program.cs             # エントリポイント（Middleware/DI）
 │       └── BlazorApp.csproj
@@ -118,25 +125,42 @@
    - Secrets/Env: タスク定義の `secrets` / `environment` で注入
 3. **ログ**: 標準出力へ出力し、CloudWatch Logs に集約
 
-## 新機能の追加方法
+## 新機能の追加方法（機能ベースアーキテクチャ）
 
-1. **サービス追加**: `Features/[Feature]/I[Feature]Service.cs` と `[Feature]Service.cs` を作成
-2. **DI 登録**: `Program.cs` に `AddScoped<I[Feature]Service, [Feature]Service>()`
-3. **Controller 作成**: `Controllers/[Feature]Controller.cs` を作成
-4. **View 作成**: `Views/[Feature]/` フォルダを作成し、必要なビューを追加
-5. **テスト**: 単体は `BlazorApp.Tests/Services/`、E2E は `BlazorApp.E2ETests/`
-6. **ナビ**: 必要に応じて `Views/Shared/_Layout.cshtml` や `Views/Home/Index.cshtml` にリンクを追加
+1. **機能フォルダ作成**: `Features/[Feature]/` フォルダを作成
+2. **Controller 作成**: `Features/[Feature]/[Feature]Controller.cs` を作成
+3. **Service 作成**: `Features/[Feature]/[Feature]Service.cs` と `I[Feature]Service.cs` を作成（必要に応じて）
+4. **View 作成**: `Features/[Feature]/Views/` フォルダを作成し、必要なビューを追加
+5. **DI 登録**: `Program.cs` に `AddScoped<I[Feature]Service, [Feature]Service>()`
+6. **テスト**: 単体は `BlazorApp.Tests/Services/`、E2E は `BlazorApp.E2ETests/`
+7. **ナビ**: 必要に応じて `Views/Shared/_Layout.cshtml` にリンクを追加
 
-### 例: 新機能 "Orders"（抜粋）
+**重要**: 1つの機能に関連するすべてのファイル（Controller、Service、View）は同じフォルダにまとめます。
+
+### 例: 新機能 "Orders"（機能ベース構成）
+
+**フォルダ構造:**
+```
+Features/
+  └── Orders/
+      ├── OrdersController.cs       # Controller
+      ├── OrderService.cs           # Service (IOrderServiceも含む)
+      ├── PricingService.cs         # 関連Service
+      └── Views/
+          └── Index.cshtml          # View
+```
+
+**コード例:**
 
 ```csharp
-// Features/Orders/IOrderService.cs
+// Features/Orders/OrderService.cs
+namespace BlazorApp.Services;
+
 public interface IOrderService
 {
     decimal CalculateFinalPrice(Order order);
 }
 
-// Features/Orders/OrderService.cs
 public class OrderService : IOrderService
 {
     public decimal CalculateFinalPrice(Order order) { ... }
@@ -144,12 +168,12 @@ public class OrderService : IOrderService
 ```
 
 ```csharp
-// Program.cs
-builder.Services.AddScoped<IOrderService, OrderService>();
-```
+// Features/Orders/OrdersController.cs
+namespace BlazorApp.Features.Orders;
 
-```csharp
-// Controllers/OrdersController.cs
+using Microsoft.AspNetCore.Mvc;
+using BlazorApp.Services;
+
 public class OrdersController : Controller
 {
     private readonly IOrderService _orderService;
@@ -172,7 +196,7 @@ public class OrdersController : Controller
 ```
 
 ```cshtml
-<!-- Views/Orders/Index.cshtml -->
+<!-- Features/Orders/Views/Index.cshtml -->
 @{
     ViewData["Title"] = "Orders";
 }
@@ -183,6 +207,11 @@ public class OrdersController : Controller
     <input type="number" name="price" step="0.01" required />
     <button type="submit">Calculate</button>
 </form>
+```
+
+```csharp
+// Program.cs (DI登録)
+builder.Services.AddScoped<IOrderService, OrderService>();
 ```
 
 ## 禁止事項
