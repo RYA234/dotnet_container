@@ -64,7 +64,16 @@ else
 }
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    .AddRazorOptions(options =>
+    {
+        // Feature-based folder structure support
+        options.ViewLocationFormats.Clear();
+        options.ViewLocationFormats.Add("/Features/{1}/Views/{0}.cshtml");
+        options.ViewLocationFormats.Add("/Features/Shared/Views/{0}.cshtml");
+        options.ViewLocationFormats.Add("/Views/Shared/{0}.cshtml");
+    });
+
 builder.Services.AddScoped<BlazorApp.Services.ICalculatorService, BlazorApp.Services.CalculatorService>();
 builder.Services.AddScoped<BlazorApp.Services.IPricingService, BlazorApp.Services.PricingService>();
 builder.Services.AddScoped<BlazorApp.Services.IOrderService, BlazorApp.Services.OrderService>();
