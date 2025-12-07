@@ -1,14 +1,17 @@
 # GitHub Copilot Custom Instructions
 
-このリポジトリは .NET 8 / ASP.NET Core Blazor Server アプリケーションです。コンテナ化され、必要に応じて AWS ECS Fargate へデプロイします。
+このリポジトリは .NET 8 / ASP.NET Core MVC アプリケーションです。コンテナ化され、必要に応じて AWS ECS Fargate へデプロイします。
 
 ## プロジェクト概要
 
 - **言語**: C# (.NET 8)
-- **フレームワーク**: ASP.NET Core Blazor Server
+- **フレームワーク**: ASP.NET Core MVC
 - **デプロイ先**: Docker / AWS ECS Fargate
 - **テスト**: xUnit (Unit), Playwright for .NET (E2E)
-- **アーキテクチャ**: Razor Pages/Components + Services（DI）
+- **アーキテクチャ**: MVC (Model-View-Controller) + Services（DI）
+- **DocFx**
+
+
 
 ## フォルダ構成
 
@@ -16,12 +19,26 @@
 /
 ├── src/
 │   └── BlazorApp/
-│       ├── Pages/                 # Razor ページ/コンポーネント（ルーティング対象）
-│       │   ├── Index.razor
-│       │   └── _Host.cshtml
-│       ├── Services/              # アプリケーションサービス（ビジネスロジック）
-│       │   ├── CalculatorService.cs
-│       │   └── OrderService.cs
+│       ├── Controllers/           # MVC コントローラー（リクエスト処理）
+│       │   ├── HomeController.cs
+│       │   ├── CalculatorController.cs
+│       │   └── OrdersController.cs
+│       ├── Views/                 # Razor ビュー（UI レイアウト）
+│       │   ├── Home/
+│       │   │   └── Index.cshtml
+│       │   ├── Calculator/
+│       │   │   └── Index.cshtml
+│       │   ├── Orders/
+│       │   │   └── Index.cshtml
+│       │   ├── Shared/
+│       │   │   └── _Layout.cshtml
+│       │   ├── _ViewStart.cshtml
+│       │   └── _ViewImports.cshtml
+│       ├── Features/              # 機能別フォルダ（Services等）
+│       │   ├── Calculator/
+│       │   ├── Orders/
+│       │   └── Supabase/
+│       ├── Services/              # 共通サービス（ビジネスロジック）
 │       ├── wwwroot/               # 静的アセット
 │       ├── Program.cs             # エントリポイント（Middleware/DI）
 │       └── BlazorApp.csproj
@@ -48,13 +65,19 @@
    - 定数/readonly: `public const`/`static readonly` は PascalCase
 6. **例外処理**: サービス層で適切にスローし、UI ではユーザー向けメッセージに変換
 
-### Blazor
+### ASP.NET Core MVC
 
-1. **ルーティング**: コンポーネントに `@page "/path"` を定義
-2. **依存性注入**: `@inject` または `[Inject]` を使用
-3. **UI 応答性**: 長時間処理は `await` + 非同期で UI ブロックを避ける
-4. **入力検証**: `EditForm` + DataAnnotations を使用
-5. **状態管理**: セッション状態は Scoped サービスで管理。`static` の乱用禁止
+1. **ルーティング**:
+   - デフォルト: `{controller=Home}/{action=Index}/{id?}`
+   - Controller アクションで `[HttpGet]`/`[HttpPost]` 属性を使用
+2. **依存性注入**: Controller のコンストラクタでサービスを注入
+3. **ビュー**:
+   - Razor 構文を使用（`.cshtml` ファイル）
+   - Tag Helpers を活用（`asp-controller`, `asp-action` 等）
+4. **入力検証**: Model Binding + DataAnnotations を使用
+5. **状態管理**:
+   - セッション状態は Scoped サービスで管理
+   - ViewBag/ViewData/TempData を適切に使い分ける
 
 ## 設定 / 環境変数
 
@@ -97,19 +120,26 @@
 
 ## 新機能の追加方法
 
-1. **サービス追加**: `Services/I[Feature]Service.cs` と `Services/[Feature]Service.cs` を作成
+1. **サービス追加**: `Features/[Feature]/I[Feature]Service.cs` と `[Feature]Service.cs` を作成
 2. **DI 登録**: `Program.cs` に `AddScoped<I[Feature]Service, [Feature]Service>()`
-3. **UI 作成**: `Pages/[feature].razor` を追加し `@page` でルートを付与
-4. **テスト**: 単体は `BlazorApp.Tests/Services/`、E2E は `BlazorApp.E2ETests/`
-5. **ナビ**: 必要に応じて `Pages/Index.razor` へリンクを追加
+3. **Controller 作成**: `Controllers/[Feature]Controller.cs` を作成
+4. **View 作成**: `Views/[Feature]/` フォルダを作成し、必要なビューを追加
+5. **テスト**: 単体は `BlazorApp.Tests/Services/`、E2E は `BlazorApp.E2ETests/`
+6. **ナビ**: 必要に応じて `Views/Shared/_Layout.cshtml` や `Views/Home/Index.cshtml` にリンクを追加
 
 ### 例: 新機能 "Orders"（抜粋）
 
 ```csharp
-// Services/IOrderService.cs
+// Features/Orders/IOrderService.cs
 public interface IOrderService
 {
-    Task<int> CreateAsync(OrderDto dto, CancellationToken ct = default);
+    decimal CalculateFinalPrice(Order order);
+}
+
+// Features/Orders/OrderService.cs
+public class OrderService : IOrderService
+{
+    public decimal CalculateFinalPrice(Order order) { ... }
 }
 ```
 
@@ -118,10 +148,41 @@ public interface IOrderService
 builder.Services.AddScoped<IOrderService, OrderService>();
 ```
 
-```razor
-@page "/orders"
-@inject IOrderService OrderService
-<h3>Orders</h3>
+```csharp
+// Controllers/OrdersController.cs
+public class OrdersController : Controller
+{
+    private readonly IOrderService _orderService;
+
+    public OrdersController(IOrderService orderService)
+    {
+        _orderService = orderService;
+    }
+
+    public IActionResult Index() => View();
+
+    [HttpPost]
+    public IActionResult Calculate(string productName, int quantity, decimal price)
+    {
+        var order = new Order { ProductName = productName, Quantity = quantity, Price = price };
+        ViewBag.FinalPrice = _orderService.CalculateFinalPrice(order);
+        return View("Index");
+    }
+}
+```
+
+```cshtml
+<!-- Views/Orders/Index.cshtml -->
+@{
+    ViewData["Title"] = "Orders";
+}
+<h3>Order Calculator</h3>
+<form method="post" asp-action="Calculate">
+    <input type="text" name="productName" required />
+    <input type="number" name="quantity" required />
+    <input type="number" name="price" step="0.01" required />
+    <button type="submit">Calculate</button>
+</form>
 ```
 
 ## 禁止事項

@@ -1,0 +1,47 @@
+@{
+    ViewData["Title"] = "Orders";
+}
+
+<h3>Order Calculator</h3>
+
+<form method="post" asp-action="Calculate">
+    <div style="margin-bottom: 15px;">
+        <label for="productName">Product Name:</label><br />
+        <input type="text" id="productName" name="productName" value="@ViewBag.ProductName" required style="width: 300px;" />
+    </div>
+
+    <div style="margin-bottom: 15px;">
+        <label for="quantity">Quantity:</label><br />
+        <input type="number" id="quantity" name="quantity" value="@ViewBag.Quantity" required min="1" />
+    </div>
+
+    <div style="margin-bottom: 15px;">
+        <label for="price">Unit Price:</label><br />
+        <input type="number" id="price" name="price" value="@ViewBag.Price" required step="0.01" min="0" />
+    </div>
+
+    <button type="submit">Calculate</button>
+
+    @if (ViewBag.FinalPrice != null)
+    {
+        <div style="margin-top: 20px; padding: 15px; background-color: #f0f0f0; border-radius: 5px;">
+            <h4>Order Summary</h4>
+            <p><strong>Product:</strong> @ViewBag.ProductName</p>
+            <p><strong>Quantity:</strong> @ViewBag.Quantity</p>
+            <p><strong>Unit Price:</strong> $@ViewBag.Price</p>
+            <p><strong>Total Amount:</strong> $@ViewBag.TotalAmount</p>
+            @if (ViewBag.Discount > 0)
+            {
+                <p><strong>Discount:</strong> -$@ViewBag.Discount</p>
+            }
+            <p><strong>Final Price:</strong> <span style="color: green; font-size: 1.2em;">$@ViewBag.FinalPrice</span></p>
+        </div>
+    }
+
+    @if (ViewBag.Error != null)
+    {
+        <div style="margin-top: 10px;">
+            <strong style="color: red;">Error: @ViewBag.Error</strong>
+        </div>
+    }
+</form>

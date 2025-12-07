@@ -1,14 +1,15 @@
-# .NET Blazor Server on AWS ECS Fargate
+# .NET ASP.NET Core MVC on AWS ECS Fargate
 
-ASP.NET Core 8.0とBlazor Serverを使用したWebアプリケーション。AWS ECS Fargateで動作し、GitHub Actionsで自動デプロイされます。
+ASP.NET Core 8.0とMVCを使用したWebアプリケーション。AWS ECS Fargateで動作し、GitHub Actionsで自動デプロイされます。
 
 ## 🚀 機能
 
-- **ASP.NET Core 8.0** + **Blazor Server**
+- **ASP.NET Core 8.0** + **MVC (Model-View-Controller)**
 - パスベースルーティング対応 (`/dotnet`)
 - AWS ECS Fargate上で動作
 - GitHub Actionsによる自動デプロイ
 - SSL/TLS対応 (ACM証明書)
+- Supabase統合 (開発環境: .env、本番環境: AWS Secrets Manager)
 
 ## 📋 アーキテクチャ
 
@@ -207,23 +208,31 @@ GitHub Actionsのワークフローが:
 /
 ├── src/
 │   └── BlazorApp/
-│       ├── Features/
+│       ├── Controllers/                  # MVCコントローラー
+│       │   ├── HomeController.cs
+│       │   ├── CalculatorController.cs
+│       │   └── OrdersController.cs
+│       ├── Views/                        # Razorビュー
+│       │   ├── Home/
+│       │   │   └── Index.cshtml          # トップ（/dotnet）
 │       │   ├── Calculator/
-│       │   │   ├── CalculatorService.cs
-│       │   │   └── Pages/
-│       │   │       └── Index.razor       # /calculator
-│       │   └── Orders/
-│       │       ├── OrderService.cs
-│       │       ├── PricingService.cs
-│       │       └── Pages/
-│       │           └── Index.razor       # /orders
-│       ├── Pages/
-│       │   ├── Index.razor               # トップ（/dotnet）
-│       │   ├── _Host.cshtml
-│       │   └── _Imports.razor
+│       │   │   └── Index.cshtml          # /calculator
+│       │   ├── Orders/
+│       │   │   └── Index.cshtml          # /orders
+│       │   ├── Shared/
+│       │   │   └── _Layout.cshtml        # 共有レイアウト
+│       │   ├── _ViewStart.cshtml
+│       │   └── _ViewImports.cshtml
+│       ├── Features/                     # 機能別サービス
+│       │   ├── Calculator/
+│       │   │   └── CalculatorService.cs
+│       │   ├── Orders/
+│       │   │   ├── OrderService.cs
+│       │   │   └── PricingService.cs
+│       │   └── Supabase/
+│       │       └── SupabaseService.cs
 │       ├── wwwroot/
 │       │   └── css/site.css
-│       ├── App.razor
 │       ├── Program.cs
 │       └── BlazorApp.csproj
 ├── BlazorApp.Tests/
@@ -238,6 +247,7 @@ GitHub Actionsのワークフローが:
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .dockerignore
+├── .env.example
 ├── dotnet_container.sln
 └── README.md
 ```
@@ -312,8 +322,8 @@ aws elbv2 describe-target-health --target-group-arn <TARGET_GROUP_ARN>
 
 ## 🎯 技術スタック
 
-- **フロントエンド**: Blazor Server (C#)
-- **バックエンド**: ASP.NET Core 8.0
+- **フロントエンド**: Razor Views (MVC)
+- **バックエンド**: ASP.NET Core 8.0 MVC
 - **単体テスト**: xUnit, Moq, FluentAssertions, Coverlet
 - **E2Eテスト**: Playwright for .NET, NUnit
 - **コンテナ**: Docker + Docker Compose
@@ -323,6 +333,7 @@ aws elbv2 describe-target-health --target-group-arn <TARGET_GROUP_ARN>
 - **ロードバランサー**: Application Load Balancer
 - **証明書**: AWS Certificate Manager
 - **ログ**: CloudWatch Logs
+- **外部サービス**: Supabase (開発: .env、本番: AWS Secrets Manager)
 
 ## 📝 ライセンス
 
@@ -336,5 +347,5 @@ RYA234
 
 - [インフラリポジトリ](https://github.com/RYA234/my_web_infra)
 - [AWS ECS Documentation](https://docs.aws.amazon.com/ecs/)
-- [Blazor Documentation](https://docs.microsoft.com/aspnet/core/blazor/)
+- [ASP.NET Core MVC Documentation](https://docs.microsoft.com/aspnet/core/mvc/)
 - [GitHub Actions OIDC](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services)
