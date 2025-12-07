@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - BlazorApp</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+    <header>
+        <nav style="background-color: #333; padding: 15px;">
+            <ul style="list-style: none; margin: 0; padding: 0; display: flex; gap: 20px;">
+                <li><a asp-controller="Home" asp-action="Index" style="color: white; text-decoration: none;">Home</a></li>
+                <li><a asp-controller="Calculator" asp-action="Index" style="color: white; text-decoration: none;">Calculator</a></li>
+                <li><a asp-controller="Orders" asp-action="Index" style="color: white; text-decoration: none;">Orders</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main style="padding: 20px;">
+        @RenderBody()
+    </main>
+
+    <footer style="margin-top: 50px; padding: 20px; background-color: #f0f0f0; text-align: center;">
+        <p>&copy; 2024 - BlazorApp (Migrated to ASP.NET Core MVC)</p>
+    </footer>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

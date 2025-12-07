@@ -1,0 +1,21 @@
+@{
+    ViewData["Title"] = "Home";
+}
+
+<h1>Welcome to ASP.NET Core MVC</h1>
+
+<p>This application has been migrated from Blazor Server to ASP.NET Core MVC.</p>
+
+<h3>Available Features:</h3>
+
+<ul>
+    <li><a asp-controller="Calculator" asp-action="Index">Calculator</a> - Basic arithmetic operations</li>
+    <li><a asp-controller="Orders" asp-action="Index">Orders</a> - Order price calculator with discount</li>
+</ul>
+
+<h3>API Endpoints:</h3>
+
+<ul>
+    <li><a href="/healthz">/healthz</a> - Health check endpoint</li>
+    <li><a href="/supabase/test">/supabase/test</a> - Supabase connection test</li>
+</ul>

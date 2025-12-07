@@ -64,8 +64,7 @@ else
 }
 
 // Add services to the container.
-builder.Services.AddRazorPages();
-builder.Services.AddServerSideBlazor();
+builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<BlazorApp.Services.ICalculatorService, BlazorApp.Services.CalculatorService>();
 builder.Services.AddScoped<BlazorApp.Services.IPricingService, BlazorApp.Services.PricingService>();
 builder.Services.AddScoped<BlazorApp.Services.IOrderService, BlazorApp.Services.OrderService>();
@@ -95,7 +94,8 @@ app.MapGet("/supabase/test", async (ISupabaseService supabaseService) =>
     return result.Success ? Results.Ok(result) : Results.Json(result, statusCode: 503);
 });
 
-app.MapBlazorHub();
-app.MapFallbackToPage("/_Host");
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();

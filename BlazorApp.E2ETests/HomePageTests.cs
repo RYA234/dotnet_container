@@ -22,7 +22,7 @@ public class HomePageTests : PageTest
         await Page.GotoAsync(BaseUrl);
 
         // ページタイトルを確認
-        await Expect(Page).ToHaveTitleAsync(new System.Text.RegularExpressions.Regex(".*Blazor.*"));
+        await Expect(Page).ToHaveTitleAsync(new System.Text.RegularExpressions.Regex(".*Home.*|.*Blazor.*"));
     }
 
     [Test]
@@ -37,7 +37,7 @@ public class HomePageTests : PageTest
 
         // 見出しテキストを確認
         var headingText = await heading.TextContentAsync();
-        Assert.That(headingText, Does.Contain("基幹システムサンプル").Or.Contain("Blazor"));
+        Assert.That(headingText, Does.Contain("ASP.NET Core MVC").Or.Contain("Welcome"));
     }
 
     [Test]
@@ -48,21 +48,21 @@ public class HomePageTests : PageTest
 
         // プロジェクトの目的セクションを確認
         var content = await Page.ContentAsync();
-        Assert.That(content, Does.Contain("プロジェクトの目的").Or.Contain("在庫").Or.Contain("物流"));
+        Assert.That(content, Does.Contain("migrated").Or.Contain("Calculator").Or.Contain("Orders"));
     }
 
     [Test]
-    public async Task HomePage_DisplaysCards()
+    public async Task HomePage_DisplaysLinks()
     {
         // ホームページにアクセス
         await Page.GotoAsync(BaseUrl);
 
-        // カードコンポーネントが表示されていることを確認
-        var cards = Page.Locator(".card");
-        var count = await cards.CountAsync();
+        // リンクが表示されていることを確認
+        var links = Page.Locator("a");
+        var count = await links.CountAsync();
 
-        // 少なくとも1つのカードが表示されていることを確認
-        Assert.That(count, Is.GreaterThan(0), "ページに少なくとも1つのカードが表示されている必要があります");
+        // 少なくとも1つのリンクが表示されていることを確認
+        Assert.That(count, Is.GreaterThan(0), "ページに少なくとも1つのリンクが表示されている必要があります");
     }
 
     [Test]
@@ -91,6 +91,6 @@ public class HomePageTests : PageTest
 
         // 技術スタックセクションを確認
         var content = await Page.ContentAsync();
-        Assert.That(content, Does.Contain("技術スタック").Or.Contain("Blazor").Or.Contain(".NET"));
+        Assert.That(content, Does.Contain("ASP.NET Core MVC").Or.Contain("MVC").Or.Contain(".NET"));
     }
 }
