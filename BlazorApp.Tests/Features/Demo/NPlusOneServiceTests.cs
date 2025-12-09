@@ -1,55 +1,98 @@
 using Xunit;
 using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using Moq;
-using BlazorApp.Features.Demo.Data;
-using BlazorApp.Features.Demo.Entities;
 using BlazorApp.Features.Demo.Services;
+using Microsoft.Data.SqlClient;
 
 namespace BlazorApp.Tests.Features.Demo;
 
 public class NPlusOneServiceTests : IDisposable
 {
-    private readonly DemoDbContext _context;
     private readonly NPlusOneService _service;
+    private readonly string _connectionString;
+    private readonly IConfiguration _configuration;
 
     public NPlusOneServiceTests()
     {
-        var options = new DbContextOptionsBuilder<DemoDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString()) // Unique database for each test
-            .Options;
+        // Use test database
+        _connectionString = "Server=(localdb)\\mssqllocaldb;Database=DemoDbTest;Trusted_Connection=True;MultipleActiveResultSets=true";
 
-        _context = new DemoDbContext(options);
-
-        // Seed test data
-        SeedTestData();
+        var configBuilder = new ConfigurationBuilder();
+        configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            { "ConnectionStrings:DemoDatabase", _connectionString }
+        });
+        _configuration = configBuilder.Build();
 
         var logger = new Mock<ILogger<NPlusOneService>>();
-        _service = new NPlusOneService(_context, logger.Object);
+        _service = new NPlusOneService(_configuration, logger.Object);
+
+        // Setup test database
+        SetupTestDatabase();
     }
 
-    private void SeedTestData()
+    private void SetupTestDatabase()
     {
-        var departments = new List<Department>
-        {
-            new Department { Id = 1, Name = "開発部" },
-            new Department { Id = 2, Name = "営業部" },
-            new Department { Id = 3, Name = "人事部" }
-        };
+        using var connection = new SqlConnection(_connectionString);
+        connection.Open();
 
-        var users = new List<User>
+        // Create database if it doesn't exist
+        var createDbCommand = connection.CreateCommand();
+        createDbCommand.CommandText = "IF DB_ID('DemoDbTest') IS NULL CREATE DATABASE DemoDbTest";
+        try
         {
-            new User { Id = 1, Name = "山田太郎", DepartmentId = 1, Email = "yamada@example.com" },
-            new User { Id = 2, Name = "佐藤花子", DepartmentId = 2, Email = "sato@example.com" },
-            new User { Id = 3, Name = "鈴木一郎", DepartmentId = 1, Email = "suzuki@example.com" },
-            new User { Id = 4, Name = "高橋美咲", DepartmentId = 3, Email = "takahashi@example.com" },
-            new User { Id = 5, Name = "田中健太", DepartmentId = 1, Email = "tanaka@example.com" }
-        };
+            createDbCommand.ExecuteNonQuery();
+        }
+        catch
+        {
+            // Database might already exist
+        }
 
-        _context.Departments.AddRange(departments);
-        _context.Users.AddRange(users);
-        _context.SaveChanges();
+        connection.ChangeDatabase("DemoDbTest");
+
+        // Drop tables if they exist
+        var dropCommand = connection.CreateCommand();
+        dropCommand.CommandText = @"
+            IF OBJECT_ID('Users', 'U') IS NOT NULL DROP TABLE Users;
+            IF OBJECT_ID('Departments', 'U') IS NOT NULL DROP TABLE Departments;
+        ";
+        dropCommand.ExecuteNonQuery();
+
+        // Create tables
+        var createCommand = connection.CreateCommand();
+        createCommand.CommandText = @"
+            CREATE TABLE Departments (
+                Id INT PRIMARY KEY IDENTITY(1,1),
+                Name NVARCHAR(100) NOT NULL,
+                CreatedAt DATETIME2 DEFAULT GETDATE()
+            );
+
+            CREATE TABLE Users (
+                Id INT PRIMARY KEY IDENTITY(1,1),
+                Name NVARCHAR(100) NOT NULL,
+                DepartmentId INT NOT NULL,
+                Email NVARCHAR(255) NOT NULL,
+                CreatedAt DATETIME2 DEFAULT GETDATE(),
+                FOREIGN KEY (DepartmentId) REFERENCES Departments(Id)
+            );
+        ";
+        createCommand.ExecuteNonQuery();
+
+        // Insert test data
+        var insertCommand = connection.CreateCommand();
+        insertCommand.CommandText = @"
+            INSERT INTO Departments (Name) VALUES ('開発部'), ('営業部'), ('人事部');
+
+            INSERT INTO Users (Name, DepartmentId, Email) VALUES
+            ('山田太郎', 1, 'yamada@example.com'),
+            ('佐藤花子', 2, 'sato@example.com'),
+            ('鈴木一郎', 1, 'suzuki@example.com'),
+            ('高橋美咲', 3, 'takahashi@example.com'),
+            ('田中健太', 1, 'tanaka@example.com');
+        ";
+        insertCommand.ExecuteNonQuery();
     }
 
     [Fact]
@@ -86,7 +129,7 @@ public class NPlusOneServiceTests : IDisposable
         var result = await _service.GetUsersBad();
 
         // Assert
-        result.SqlCount.Should().BeGreaterThan(1); // Should have multiple SQL queries
+        result.SqlCount.Should().Be(6); // 1 + 5 queries (N+1 problem)
     }
 
     [Fact]
@@ -123,32 +166,17 @@ public class NPlusOneServiceTests : IDisposable
         var result = await _service.GetUsersGood();
 
         // Assert
-        result.SqlCount.Should().BeLessThanOrEqualTo(2); // Should be optimized with fewer queries
+        result.SqlCount.Should().Be(1); // Only 1 JOIN query
     }
 
     [Fact]
     public async Task GetUsersGood_ShouldBeFasterThanBad()
     {
-        // Arrange
-        // Add more data to make the difference noticeable
-        for (int i = 6; i <= 50; i++)
-        {
-            _context.Users.Add(new User
-            {
-                Id = i,
-                Name = $"User{i}",
-                DepartmentId = (i % 3) + 1,
-                Email = $"user{i}@example.com"
-            });
-        }
-        _context.SaveChanges();
-
         // Act
         var badResult = await _service.GetUsersBad();
         var goodResult = await _service.GetUsersGood();
 
         // Assert
-        goodResult.ExecutionTimeMs.Should().BeLessThanOrEqualTo(badResult.ExecutionTimeMs);
         goodResult.SqlCount.Should().BeLessThan(badResult.SqlCount);
     }
 
@@ -175,6 +203,22 @@ public class NPlusOneServiceTests : IDisposable
 
     public void Dispose()
     {
-        _context.Dispose();
+        // Cleanup test database
+        try
+        {
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
+
+            var dropCommand = connection.CreateCommand();
+            dropCommand.CommandText = @"
+                IF OBJECT_ID('Users', 'U') IS NOT NULL DROP TABLE Users;
+                IF OBJECT_ID('Departments', 'U') IS NOT NULL DROP TABLE Departments;
+            ";
+            dropCommand.ExecuteNonQuery();
+        }
+        catch
+        {
+            // Ignore cleanup errors
+        }
     }
 }

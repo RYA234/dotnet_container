@@ -1,89 +1,144 @@
 using System.Diagnostics;
-using Microsoft.EntityFrameworkCore;
-using BlazorApp.Features.Demo.Data;
+using System.Data;
+using Microsoft.Data.SqlClient;
 using BlazorApp.Features.Demo.DTOs;
 
 namespace BlazorApp.Features.Demo.Services;
 
 public class NPlusOneService : INPlusOneService
 {
-    private readonly DemoDbContext _context;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<NPlusOneService> _logger;
+    private int _sqlQueryCount;
 
-    public NPlusOneService(DemoDbContext context, ILogger<NPlusOneService> logger)
+    public NPlusOneService(IConfiguration configuration, ILogger<NPlusOneService> logger)
     {
-        _context = context;
+        _configuration = configuration;
         _logger = logger;
+    }
+
+    private SqlConnection GetConnection()
+    {
+        var connectionString = _configuration.GetConnectionString("DemoDatabase");
+        return new SqlConnection(connectionString);
     }
 
     public async Task<NPlusOneResponse> GetUsersBad()
     {
         var sw = Stopwatch.StartNew();
-
-        // N+1問題あり: ユーザーを取得後、ループ内で部署情報を取得
-        var users = await _context.Users.ToListAsync(); // 1回のクエリ
-
+        _sqlQueryCount = 0;
         var result = new List<UserWithDepartment>();
-        foreach (var user in users)
-        {
-            // 各ユーザーごとに部署情報を取得（N回のクエリ）
-            var department = await _context.Departments
-                .FirstOrDefaultAsync(d => d.Id == user.DepartmentId);
 
-            result.Add(new UserWithDepartment
+        using (var connection = GetConnection())
+        {
+            await connection.OpenAsync();
+
+            // N+1問題あり: ユーザーを取得後、ループ内で部署情報を取得
+            var usersCommand = new SqlCommand("SELECT Id, Name, DepartmentId, Email FROM Users", connection);
+            _sqlQueryCount++; // 1回目のクエリ
+
+            using (var reader = await usersCommand.ExecuteReaderAsync())
             {
-                Id = user.Id,
-                Name = user.Name,
-                Department = department != null ? new DepartmentInfo
+                var users = new List<(int Id, string Name, int DepartmentId, string Email)>();
+                while (await reader.ReadAsync())
                 {
-                    Id = department.Id,
-                    Name = department.Name
-                } : new DepartmentInfo()
-            });
+                    users.Add((
+                        reader.GetInt32(0),
+                        reader.GetString(1),
+                        reader.GetInt32(2),
+                        reader.GetString(3)
+                    ));
+                }
+                reader.Close();
+
+                // 各ユーザーごとに部署情報を取得（N回のクエリ）
+                foreach (var user in users)
+                {
+                    var deptCommand = new SqlCommand(
+                        "SELECT Id, Name FROM Departments WHERE Id = @DeptId",
+                        connection);
+                    deptCommand.Parameters.AddWithValue("@DeptId", user.DepartmentId);
+                    _sqlQueryCount++; // N回のクエリ
+
+                    using (var deptReader = await deptCommand.ExecuteReaderAsync())
+                    {
+                        DepartmentInfo? department = null;
+                        if (await deptReader.ReadAsync())
+                        {
+                            department = new DepartmentInfo
+                            {
+                                Id = deptReader.GetInt32(0),
+                                Name = deptReader.GetString(1)
+                            };
+                        }
+
+                        result.Add(new UserWithDepartment
+                        {
+                            Id = user.Id,
+                            Name = user.Name,
+                            Department = department ?? new DepartmentInfo()
+                        });
+                    }
+                }
+            }
         }
 
         sw.Stop();
 
-        // InMemoryではクエリカウントが難しいため、ループ数から推測
-        var sqlCount = 1 + users.Count; // 1回(Users取得) + N回(Department取得)
-
         return new NPlusOneResponse
         {
             ExecutionTimeMs = sw.ElapsedMilliseconds,
-            SqlCount = sqlCount,
+            SqlCount = _sqlQueryCount,
             DataSize = System.Text.Json.JsonSerializer.Serialize(result).Length,
             RowCount = result.Count,
             Data = result,
-            Message = $"N+1問題あり: ループ内で部署情報を{users.Count}回個別に取得しています（合計{sqlCount}クエリ）"
+            Message = $"N+1問題あり: ループ内で部署情報を{result.Count}回個別に取得しています（合計{_sqlQueryCount}クエリ）"
         };
     }
 
     public async Task<NPlusOneResponse> GetUsersGood()
     {
         var sw = Stopwatch.StartNew();
+        _sqlQueryCount = 0;
+        var result = new List<UserWithDepartment>();
 
-        // 最適化済み: Includeを使って1回のクエリでJOIN取得
-        var users = await _context.Users
-            .Include(u => u.Department)
-            .ToListAsync();
-
-        var result = users.Select(user => new UserWithDepartment
+        using (var connection = GetConnection())
         {
-            Id = user.Id,
-            Name = user.Name,
-            Department = user.Department != null ? new DepartmentInfo
+            await connection.OpenAsync();
+
+            // 最適化済み: JOINを使って1回のクエリで全データ取得
+            var sql = @"
+                SELECT u.Id, u.Name, u.Email, d.Id AS DeptId, d.Name AS DeptName
+                FROM Users u
+                INNER JOIN Departments d ON u.DepartmentId = d.Id";
+
+            var command = new SqlCommand(sql, connection);
+            _sqlQueryCount++; // 1回のクエリ
+
+            using (var reader = await command.ExecuteReaderAsync())
             {
-                Id = user.Department.Id,
-                Name = user.Department.Name
-            } : new DepartmentInfo()
-        }).ToList();
+                while (await reader.ReadAsync())
+                {
+                    result.Add(new UserWithDepartment
+                    {
+                        Id = reader.GetInt32(0),
+                        Name = reader.GetString(1),
+                        Department = new DepartmentInfo
+                        {
+                            Id = reader.GetInt32(3),
+                            Name = reader.GetString(4)
+                        }
+                    });
+                }
+            }
+        }
 
         sw.Stop();
 
         return new NPlusOneResponse
         {
             ExecutionTimeMs = sw.ElapsedMilliseconds,
-            SqlCount = 1, // Includeで1回のクエリ
+            SqlCount = _sqlQueryCount,
             DataSize = System.Text.Json.JsonSerializer.Serialize(result).Length,
             RowCount = result.Count,
             Data = result,

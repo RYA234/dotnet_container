@@ -1,9 +1,6 @@
 using DotNetEnv;
 using BlazorApp.Features.Supabase.Services;
-using BlazorApp.Features.Demo.Data;
 using BlazorApp.Features.Demo.Services;
-using BlazorApp.Features.Demo.Entities;
-using Microsoft.EntityFrameworkCore;
 using Amazon.SecretsManager;
 using Amazon.SecretsManager.Model;
 using System.Text.Json;
@@ -83,56 +80,11 @@ builder.Services.AddScoped<BlazorApp.Services.IPricingService, BlazorApp.Service
 builder.Services.AddScoped<BlazorApp.Services.IOrderService, BlazorApp.Services.OrderService>();
 builder.Services.AddScoped<ISupabaseService, SupabaseService>();
 
-// Demo database configuration (using InMemory for demo purposes)
-builder.Services.AddDbContext<DemoDbContext>(options =>
-    options.UseInMemoryDatabase("DemoDatabase"));
-
+// Demo database configuration (using raw SQL with SQL Server)
+// Connection string should be set in appsettings.json or environment variables
 builder.Services.AddScoped<INPlusOneService, NPlusOneService>();
 
 var app = builder.Build();
-
-// Initialize demo database with sample data
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<DemoDbContext>();
-    context.Database.EnsureCreated();
-
-    // Seed data if empty
-    if (!context.Departments.Any())
-    {
-        var departments = new List<Department>
-        {
-            new Department { Name = "開発部" },
-            new Department { Name = "営業部" },
-            new Department { Name = "人事部" },
-            new Department { Name = "総務部" },
-            new Department { Name = "マーケティング部" },
-            new Department { Name = "経理部" },
-            new Department { Name = "法務部" },
-            new Department { Name = "カスタマーサポート部" },
-            new Department { Name = "企画部" },
-            new Department { Name = "品質保証部" }
-        };
-        context.Departments.AddRange(departments);
-        context.SaveChanges();
-
-        var users = new List<User>();
-        var names = new[] { "山田太郎", "佐藤花子", "鈴木一郎", "高橋美咲", "田中健太", "伊藤愛", "渡辺翔", "中村結衣", "小林大輔", "加藤さくら" };
-        for (int i = 0; i < 100; i++)
-        {
-            users.Add(new User
-            {
-                Name = $"{names[i % names.Length]}{i}",
-                DepartmentId = (i % 10) + 1,
-                Email = $"user{i}@example.com"
-            });
-        }
-        context.Users.AddRange(users);
-        context.SaveChanges();
-
-        Console.WriteLine("✓ Demo database initialized with sample data");
-    }
-}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
