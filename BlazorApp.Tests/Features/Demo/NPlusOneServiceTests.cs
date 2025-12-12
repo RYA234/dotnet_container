@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using BlazorApp.Features.Demo.Services;
-using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 
 namespace BlazorApp.Tests.Features.Demo;
 
@@ -13,11 +13,16 @@ public class NPlusOneServiceTests : IDisposable
     private readonly NPlusOneService _service;
     private readonly string _connectionString;
     private readonly IConfiguration _configuration;
+    private readonly SqliteConnection _sharedConnection;
 
     public NPlusOneServiceTests()
     {
-        // Use test database
-        _connectionString = "Server=(localdb)\\mssqllocaldb;Database=DemoDbTest;Trusted_Connection=True;MultipleActiveResultSets=true";
+        // Use shared in-memory database connection
+        _connectionString = "Data Source=InMemoryTest;Mode=Memory;Cache=Shared";
+
+        // Create and keep a shared connection open for the test
+        _sharedConnection = new SqliteConnection(_connectionString);
+        _sharedConnection.Open();
 
         var configBuilder = new ConfigurationBuilder();
         configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
@@ -35,53 +40,28 @@ public class NPlusOneServiceTests : IDisposable
 
     private void SetupTestDatabase()
     {
-        using var connection = new SqlConnection(_connectionString);
-        connection.Open();
-
-        // Create database if it doesn't exist
-        var createDbCommand = connection.CreateCommand();
-        createDbCommand.CommandText = "IF DB_ID('DemoDbTest') IS NULL CREATE DATABASE DemoDbTest";
-        try
-        {
-            createDbCommand.ExecuteNonQuery();
-        }
-        catch
-        {
-            // Database might already exist
-        }
-
-        connection.ChangeDatabase("DemoDbTest");
-
-        // Drop tables if they exist
-        var dropCommand = connection.CreateCommand();
-        dropCommand.CommandText = @"
-            IF OBJECT_ID('Users', 'U') IS NOT NULL DROP TABLE Users;
-            IF OBJECT_ID('Departments', 'U') IS NOT NULL DROP TABLE Departments;
-        ";
-        dropCommand.ExecuteNonQuery();
-
         // Create tables
-        var createCommand = connection.CreateCommand();
+        var createCommand = _sharedConnection.CreateCommand();
         createCommand.CommandText = @"
             CREATE TABLE Departments (
-                Id INT PRIMARY KEY IDENTITY(1,1),
-                Name NVARCHAR(100) NOT NULL,
-                CreatedAt DATETIME2 DEFAULT GETDATE()
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL,
+                CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
             );
 
             CREATE TABLE Users (
-                Id INT PRIMARY KEY IDENTITY(1,1),
-                Name NVARCHAR(100) NOT NULL,
-                DepartmentId INT NOT NULL,
-                Email NVARCHAR(255) NOT NULL,
-                CreatedAt DATETIME2 DEFAULT GETDATE(),
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL,
+                DepartmentId INTEGER NOT NULL,
+                Email TEXT NOT NULL,
+                CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (DepartmentId) REFERENCES Departments(Id)
             );
         ";
         createCommand.ExecuteNonQuery();
 
         // Insert test data
-        var insertCommand = connection.CreateCommand();
+        var insertCommand = _sharedConnection.CreateCommand();
         insertCommand.CommandText = @"
             INSERT INTO Departments (Name) VALUES ('開発部'), ('営業部'), ('人事部');
 
@@ -203,22 +183,8 @@ public class NPlusOneServiceTests : IDisposable
 
     public void Dispose()
     {
-        // Cleanup test database
-        try
-        {
-            using var connection = new SqlConnection(_connectionString);
-            connection.Open();
-
-            var dropCommand = connection.CreateCommand();
-            dropCommand.CommandText = @"
-                IF OBJECT_ID('Users', 'U') IS NOT NULL DROP TABLE Users;
-                IF OBJECT_ID('Departments', 'U') IS NOT NULL DROP TABLE Departments;
-            ";
-            dropCommand.ExecuteNonQuery();
-        }
-        catch
-        {
-            // Ignore cleanup errors
-        }
+        // Close the shared connection to clean up the in-memory database
+        _sharedConnection?.Close();
+        _sharedConnection?.Dispose();
     }
 }

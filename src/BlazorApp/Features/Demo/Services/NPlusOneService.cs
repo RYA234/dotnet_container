@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.Data;
-using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using BlazorApp.Features.Demo.DTOs;
 
 namespace BlazorApp.Features.Demo.Services;
@@ -17,10 +17,10 @@ public class NPlusOneService : INPlusOneService
         _logger = logger;
     }
 
-    private SqlConnection GetConnection()
+    private SqliteConnection GetConnection()
     {
         var connectionString = _configuration.GetConnectionString("DemoDatabase");
-        return new SqlConnection(connectionString);
+        return new SqliteConnection(connectionString);
     }
 
     public async Task<NPlusOneResponse> GetUsersBad()
@@ -34,7 +34,8 @@ public class NPlusOneService : INPlusOneService
             await connection.OpenAsync();
 
             // N+1問題あり: ユーザーを取得後、ループ内で部署情報を取得
-            var usersCommand = new SqlCommand("SELECT Id, Name, DepartmentId, Email FROM Users", connection);
+            var usersCommand = connection.CreateCommand();
+            usersCommand.CommandText = "SELECT Id, Name, DepartmentId, Email FROM Users";
             _sqlQueryCount++; // 1回目のクエリ
 
             using (var reader = await usersCommand.ExecuteReaderAsync())
@@ -43,10 +44,10 @@ public class NPlusOneService : INPlusOneService
                 while (await reader.ReadAsync())
                 {
                     users.Add((
-                        reader.GetInt32(0),
-                        reader.GetString(1),
-                        reader.GetInt32(2),
-                        reader.GetString(3)
+                        Convert.ToInt32(reader["Id"]),
+                        reader["Name"].ToString() ?? "",
+                        Convert.ToInt32(reader["DepartmentId"]),
+                        reader["Email"].ToString() ?? ""
                     ));
                 }
                 reader.Close();
@@ -54,9 +55,8 @@ public class NPlusOneService : INPlusOneService
                 // 各ユーザーごとに部署情報を取得（N回のクエリ）
                 foreach (var user in users)
                 {
-                    var deptCommand = new SqlCommand(
-                        "SELECT Id, Name FROM Departments WHERE Id = @DeptId",
-                        connection);
+                    var deptCommand = connection.CreateCommand();
+                    deptCommand.CommandText = "SELECT Id, Name FROM Departments WHERE Id = @DeptId";
                     deptCommand.Parameters.AddWithValue("@DeptId", user.DepartmentId);
                     _sqlQueryCount++; // N回のクエリ
 
@@ -67,8 +67,8 @@ public class NPlusOneService : INPlusOneService
                         {
                             department = new DepartmentInfo
                             {
-                                Id = deptReader.GetInt32(0),
-                                Name = deptReader.GetString(1)
+                                Id = Convert.ToInt32(deptReader["Id"]),
+                                Name = deptReader["Name"].ToString() ?? ""
                             };
                         }
 
@@ -112,7 +112,8 @@ public class NPlusOneService : INPlusOneService
                 FROM Users u
                 INNER JOIN Departments d ON u.DepartmentId = d.Id";
 
-            var command = new SqlCommand(sql, connection);
+            var command = connection.CreateCommand();
+            command.CommandText = sql;
             _sqlQueryCount++; // 1回のクエリ
 
             using (var reader = await command.ExecuteReaderAsync())
@@ -121,12 +122,12 @@ public class NPlusOneService : INPlusOneService
                 {
                     result.Add(new UserWithDepartment
                     {
-                        Id = reader.GetInt32(0),
-                        Name = reader.GetString(1),
+                        Id = Convert.ToInt32(reader["Id"]),
+                        Name = reader["Name"].ToString() ?? "",
                         Department = new DepartmentInfo
                         {
-                            Id = reader.GetInt32(3),
-                            Name = reader.GetString(4)
+                            Id = Convert.ToInt32(reader["DeptId"]),
+                            Name = reader["DeptName"].ToString() ?? ""
                         }
                     });
                 }
