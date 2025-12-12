@@ -1,5 +1,6 @@
 using DotNetEnv;
 using BlazorApp.Features.Supabase.Services;
+using BlazorApp.Features.Demo.Services;
 using Amazon.SecretsManager;
 using Amazon.SecretsManager.Model;
 using System.Text.Json;
@@ -78,6 +79,10 @@ builder.Services.AddScoped<BlazorApp.Services.ICalculatorService, BlazorApp.Serv
 builder.Services.AddScoped<BlazorApp.Services.IPricingService, BlazorApp.Services.PricingService>();
 builder.Services.AddScoped<BlazorApp.Services.IOrderService, BlazorApp.Services.OrderService>();
 builder.Services.AddScoped<ISupabaseService, SupabaseService>();
+
+// Demo database configuration (using raw SQL with SQL Server)
+// Connection string should be set in appsettings.json or environment variables
+builder.Services.AddScoped<INPlusOneService, NPlusOneService>();
 
 var app = builder.Build();
 

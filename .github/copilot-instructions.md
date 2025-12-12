@@ -13,6 +13,7 @@
 
 
 
+
 ## フォルダ構成
 
 **機能ベース（Feature-Based）アーキテクチャを採用しています。**
@@ -236,3 +237,374 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 - 当面はモノリシック構成を維持
 - UI はシンプルに保つ（不要な複雑化を避ける）
 - 機能はサービスとページで疎結合に構成
+
+# 設計書とコードの相互修復・一元管理
+
+## 基本方針
+
+**設計書とコードは常に同期させ、相互に修復する**ことで、ドキュメントとコードの乖離を防ぎます。
+
+### 設計書の場所
+
+すべての設計書は `docs/` ディレクトリに集約されています（このファイルから見た相対パス）。
+
+```
+docs/
+├── README.md                    # ドキュメント一覧
+├── requirements.md              # システム全体の要件定義
+├── external-design/             # システム全体の外部設計
+├── internal-design/             # システム全体の内部設計
+├── operations.md                # 運用設計手順書
+├── screen-transition.md         # 画面遷移図
+├── features/                    # 機能別設計書 ⭐
+│   ├── template/                # 新機能作成時のテンプレート
+│   ├── n-plus-one-demo/         # 実装済みサンプル
+│   │   ├── README.md
+│   │   ├── requirements.md
+│   │   ├── external-design.md
+│   │   ├── internal-design.md
+│   │   └── test-cases.md
+│   └── [他の機能]/
+└── adr/                         # Architecture Decision Records
+    ├── template.md
+    ├── 001-use-sqlite-for-education.md
+    └── 002-avoid-orm-use-raw-sql.md
+```
+
+---
+
+## 設計書 → コード（実装前）
+
+### 新機能を実装する前の手順
+
+1. **機能別設計書を作成**
+   ```bash
+   # テンプレートをコピー
+   cp -r .github/docs/features/template/ .github/docs/features/[機能名]/
+
+   # 各設計書を編集
+   # - requirements.md: 要件定義
+   # - external-design.md: 画面、API、DB論理設計
+   # - internal-design.md: クラス、シーケンス、DB物理設計
+   # - test-cases.md: テストケース
+   ```
+
+2. **設計書レビュー**
+   - 設計書をレビューし、要件が正しいか確認
+   - 曖昧な部分は明確にする
+
+3. **実装開始**
+   - 設計書に従ってコーディング
+   - クラス名、メソッド名、SQL文は設計書と一致させる
+
+4. **参考例**
+   - [N+1問題デモ](docs/features/n-plus-one-demo/) を参考にする
+
+---
+
+## コード → 設計書（実装後）
+
+### コードを修正した場合の手順
+
+1. **該当する設計書を特定**
+   - 機能別設計書: `docs/features/[機能名]/`
+   - システム全体設計: `docs/external-design/` または `docs/internal-design/`
+
+2. **設計書を更新**
+   - クラス図、シーケンス図を修正
+   - API仕様、テーブル定義を更新
+   - 変更履歴を記録
+
+3. **ADRを作成（技術判断が必要な場合）**
+   ```bash
+   # ADRテンプレートをコピー
+   cp .github/docs/adr/template.md .github/docs/adr/003-[決定内容].md
+
+   # 以下を記載
+   # - なぜこの技術選定をしたか
+   # - メリット・デメリット
+   # - 代替案との比較
+   ```
+
+---
+
+## 相互修復のチェックリスト
+
+### コード実装時
+- [ ] 設計書のクラス名、メソッド名と一致しているか
+- [ ] 設計書のSQL文と一致しているか
+- [ ] 設計書のシーケンス図通りの処理フローか
+- [ ] 設計書のエラーハンドリング方針に従っているか
+
+### コード修正時
+- [ ] 設計書を更新したか（クラス図、シーケンス図、API仕様）
+- [ ] 変更履歴を記録したか
+- [ ] 技術判断が必要な変更は ADR を作成したか
+
+### 設計書作成時
+- [ ] テンプレートを使用したか
+- [ ] すべてのセクション（要件、外部設計、内部設計、テスト）を記載したか
+- [ ] 実装コードと整合性があるか
+
+---
+
+## 設計書とコードの対応表
+
+| 設計書 | コード |
+|-------|--------|
+| `features/[機能名]/requirements.md` | 実装前に作成 |
+| `features/[機能名]/external-design.md` | Controller, View, API, DBスキーマ |
+| `features/[機能名]/internal-design.md` | Service, アルゴリズム, SQL文 |
+| `features/[機能名]/test-cases.md` | xUnit テスト, Playwright E2E テスト |
+| `external-design/api-specification.md` | Controller の API エンドポイント |
+| `internal-design/class-design.md` | Service クラス、DTO |
+| `internal-design/sequence-diagrams.md` | Controller → Service → DB の処理フロー |
+| `internal-design/database-schema.md` | CREATE TABLE 文、初期データ |
+
+---
+
+## 実例: N+1問題デモ
+
+### 設計書
+- [要件定義](docs/features/n-plus-one-demo/requirements.md)
+- [外部設計](docs/features/n-plus-one-demo/external-design.md) - API仕様、ER図
+- [内部設計](docs/features/n-plus-one-demo/internal-design.md) - クラス図、シーケンス図、SQL文
+- [テストケース](docs/features/n-plus-one-demo/test-cases.md)
+
+### コード
+- `Features/Demo/DemoController.cs` - API エンドポイント
+- `Features/Demo/Services/NPlusOneService.cs` - ビジネスロジック
+- `Features/Demo/Models/NPlusOneResponse.cs` - DTO
+- `Views/Demo/Performance.cshtml` - 画面
+
+### 一致している点
+- クラス名: `NPlusOneService` （設計書とコードで一致）
+- メソッド名: `GetUsersBad()`, `GetUsersGood()` （設計書とコードで一致）
+- SQL文: Bad版は101回クエリ、Good版は1回JOINクエリ （設計書通り）
+- シーケンス図: Controller → Service → DB の流れが一致
+
+---
+
+## 禁止事項
+
+1. **設計書なしでコーディング開始** - 必ず設計書を作成してから実装
+2. **コード修正後に設計書を更新しない** - コードと設計書の乖離が発生
+3. **ADRなしで技術選定** - 将来の判断根拠が不明になる
+4. **テンプレートを使わない** - 一貫性が失われる
+
+---
+
+## Git コミット時のチェック
+
+コミット前に以下を確認:
+
+```bash
+# 1. 設計書が更新されているか確認
+git status .github/docs/
+
+# 2. コードと設計書の両方がコミットに含まれているか確認
+git diff --cached
+
+# 3. コミットメッセージに設計書の更新を明記
+git commit -m "Add [機能名] feature
+
+- Implement [機能名]Controller and Service
+- Update .github/docs/features/[機能名]/
+- Add test cases
+
+Refs: .github/docs/features/[機能名]/README.md
+"
+```
+
+---
+
+## 設計情報のコード埋め込み（XML ドキュメントコメント）
+
+### 基本方針
+
+**設計書の重要情報をコード内のXMLドキュメントコメントに埋め込む**ことで、GitHub Copilot や IDE が設計情報を参照できるようにします。
+
+### XMLドキュメントコメントの書き方
+
+#### クラスレベル
+
+```csharp
+/// <summary>
+/// N+1問題のデモ実装
+/// </summary>
+/// <remarks>
+/// <para><strong>設計書:</strong> .github/docs/features/n-plus-one-demo/internal-design.md</para>
+/// <para><strong>責務:</strong> N+1問題のBad版とGood版を実装し、実行時間とクエリ回数を測定する</para>
+/// <para><strong>依存関係:</strong></para>
+/// <list type="bullet">
+/// <item><description>IConfiguration: 接続文字列取得</description></item>
+/// <item><description>ILogger&lt;NPlusOneService&gt;: ログ出力</description></item>
+/// </list>
+/// </remarks>
+public class NPlusOneService : INPlusOneService
+{
+    // ...
+}
+```
+
+#### メソッドレベル
+
+```csharp
+/// <summary>
+/// N+1問題版（非効率な実装）
+/// </summary>
+/// <returns>実行結果（実行時間、クエリ回数、データ）</returns>
+/// <remarks>
+/// <para><strong>アルゴリズム:</strong></para>
+/// <list type="number">
+/// <item><description>Stopwatch.Start()</description></item>
+/// <item><description>Usersテーブルから全ユーザー取得（1回目のクエリ）</description></item>
+/// <item><description>各ユーザーごとにループ: Departmentsテーブルから取得（N回のクエリ）</description></item>
+/// <item><description>Stopwatch.Stop()</description></item>
+/// <item><description>NPlusOneResponseを生成して返却</description></item>
+/// </list>
+/// <para><strong>SQL実行回数:</strong> 101回（1回のUsers取得 + 100回のDepartments取得）</para>
+/// <para><strong>期待実行時間:</strong> 約45ms</para>
+/// </remarks>
+public async Task<NPlusOneResponse> GetUsersBad()
+{
+    // 実装
+}
+```
+
+#### SQL文をコメントに記載
+
+```csharp
+/// <summary>
+/// N+1問題版（最適化済み）
+/// </summary>
+/// <returns>実行結果（実行時間、クエリ回数、データ）</returns>
+/// <remarks>
+/// <para><strong>アルゴリズム:</strong> JOINで一括取得</para>
+/// <para><strong>SQL文:</strong></para>
+/// <code>
+/// SELECT
+///     u.Id,
+///     u.Name,
+///     u.Email,
+///     d.Id AS DeptId,
+///     d.Name AS DeptName
+/// FROM Users u
+/// INNER JOIN Departments d ON u.DepartmentId = d.Id;
+/// </code>
+/// <para><strong>SQL実行回数:</strong> 1回</para>
+/// <para><strong>期待実行時間:</strong> 約12ms</para>
+/// </remarks>
+public async Task<NPlusOneResponse> GetUsersGood()
+{
+    // 実装
+}
+```
+
+---
+
+### XMLドキュメントコメントのメリット
+
+1. **IDE で設計情報が表示される**
+   - Visual Studio: マウスホバーで設計情報を確認
+   - VS Code: IntelliSense で設計情報を表示
+
+2. **GitHub Copilot が参照できる**
+   - コード補完時に設計情報を考慮
+   - 設計書と一致したコードを生成
+
+3. **DocFx で API ドキュメント生成**
+   - XML コメントから自動的に API ドキュメントを生成
+   - 設計書とコードが同期したドキュメント
+
+4. **コードレビュー時に設計意図が明確**
+   - PR レビュー時に設計書を開かなくても意図がわかる
+
+---
+
+### 必須項目
+
+すべての public クラス・メソッドに以下を記載:
+
+- [ ] `<summary>`: 簡潔な概要
+- [ ] `<remarks>`: 詳細な設計情報
+  - [ ] **設計書**: ファイルパス
+  - [ ] **責務** または **アルゴリズム**: 処理の流れ
+  - [ ] **SQL文**: DB アクセスがある場合
+  - [ ] **期待実行時間** または **期待結果**: 性能要件
+
+---
+
+### テンプレート
+
+#### Service クラス
+
+```csharp
+/// <summary>
+/// [機能名]のビジネスロジック
+/// </summary>
+/// <remarks>
+/// <para><strong>設計書:</strong> .github/docs/features/[機能名]/internal-design.md</para>
+/// <para><strong>責務:</strong> [責務の説明]</para>
+/// <para><strong>依存関係:</strong></para>
+/// <list type="bullet">
+/// <item><description>IConfiguration: 設定取得</description></item>
+/// <item><description>ILogger: ログ出力</description></item>
+/// </list>
+/// </remarks>
+public class [Feature]Service : I[Feature]Service
+{
+}
+```
+
+#### メソッド
+
+```csharp
+/// <summary>
+/// [メソッドの概要]
+/// </summary>
+/// <param name="request">リクエストパラメータ</param>
+/// <returns>レスポンス</returns>
+/// <remarks>
+/// <para><strong>アルゴリズム:</strong></para>
+/// <list type="number">
+/// <item><description>入力検証</description></item>
+/// <item><description>データベースアクセス</description></item>
+/// <item><description>ビジネスロジック実行</description></item>
+/// <item><description>レスポンス生成</description></item>
+/// </list>
+/// <para><strong>SQL文:</strong></para>
+/// <code>
+/// SELECT * FROM Table WHERE Id = @Id;
+/// </code>
+/// </remarks>
+public async Task<Response> DoSomething(Request request)
+{
+}
+```
+
+---
+
+### 禁止事項
+
+1. **設計書へのリンクを省略しない** - 必ず `<strong>設計書:</strong>` を記載
+2. **SQL文を省略しない** - DB アクセスがある場合は必ず `<code>` で記載
+3. **アルゴリズムを省略しない** - 処理フローを必ず `<list>` で記載
+
+---
+
+## まとめ
+
+- **設計書優先**: 実装前に必ず設計書を作成
+- **常に同期**: コード修正時は設計書も更新
+- **テンプレート活用**: 一貫性を保つためにテンプレートを使用
+- **参考例を見る**: [N+1問題デモ](docs/features/n-plus-one-demo/) を参考に
+- **ADR作成**: 技術判断は必ず記録
+- **XML コメント埋め込み**: 設計情報をコード内に記載し、IDE や Copilot が参照できるようにする ⭐ NEW
+
+この方針により、設計書とコードが常に一致し、将来のメンテナンスが容易になります。
+
+**設計書の場所**: リポジトリルートから見ると `.github/docs/`、このファイル（copilot-instructions.md）から見ると `docs/`
+
+
+
