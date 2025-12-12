@@ -23,6 +23,13 @@ public class HomePageTests : PageTest
 
         // ページタイトルを確認
         await Expect(Page).ToHaveTitleAsync(new System.Text.RegularExpressions.Regex(".*Home.*|.*Blazor.*"));
+
+        // スクリーンショットを撮影
+        await Page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = $"screenshots/home-page-loads.png",
+            FullPage = true
+        });
     }
 
     [Test]
@@ -38,6 +45,13 @@ public class HomePageTests : PageTest
         // 見出しテキストを確認
         var headingText = await heading.TextContentAsync();
         Assert.That(headingText, Does.Contain("ASP.NET Core MVC").Or.Contain("Welcome"));
+
+        // スクリーンショットを撮影
+        await Page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = $"screenshots/home-page-content.png",
+            FullPage = true
+        });
     }
 
     [Test]
@@ -75,12 +89,26 @@ public class HomePageTests : PageTest
         // ページが正常に読み込まれることを確認
         await Expect(Page.Locator("h1").First).ToBeVisibleAsync();
 
+        // モバイルビューのスクリーンショットを撮影
+        await Page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = $"screenshots/home-page-mobile.png",
+            FullPage = true
+        });
+
         // デスクトップビューポートでテスト
         await Page.SetViewportSizeAsync(1920, 1080);
         await Page.ReloadAsync();
 
         // ページが正常に読み込まれることを確認
         await Expect(Page.Locator("h1").First).ToBeVisibleAsync();
+
+        // デスクトップビューのスクリーンショットを撮影
+        await Page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = $"screenshots/home-page-desktop.png",
+            FullPage = true
+        });
     }
 
     [Test]

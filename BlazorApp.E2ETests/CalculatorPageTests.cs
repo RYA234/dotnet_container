@@ -31,6 +31,13 @@ public class CalculatorPageTests : PageTest
         // Wait for page to reload after form submission
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await Expect(Page.Locator("strong")).ToHaveTextAsync("5");
+
+        // スクリーンショットを撮影
+        await Page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = $"screenshots/calculator-addition.png",
+            FullPage = true
+        });
     }
 
     [Test]
@@ -55,5 +62,12 @@ public class CalculatorPageTests : PageTest
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         var msg = await Page.Locator("strong").TextContentAsync();
         Assert.That(msg, Does.Contain("ゼロで除算"));
+
+        // スクリーンショットを撮影
+        await Page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = $"screenshots/calculator-divide-by-zero.png",
+            FullPage = true
+        });
     }
 }

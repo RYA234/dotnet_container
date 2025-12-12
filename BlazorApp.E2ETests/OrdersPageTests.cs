@@ -34,6 +34,13 @@ public class OrdersPageTests : PageTest
         var page1 = await Page.ContentAsync();
         Assert.That(page1, Does.Contain("合計").And.Contain("2500"));
         Assert.That(page1, Does.Contain("割引後").And.Contain("2500"));
+
+        // スクリーンショットを撮影
+        await Page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = $"screenshots/orders-price-calculation.png",
+            FullPage = true
+        });
     }
 
     [Test]
@@ -61,5 +68,12 @@ public class OrdersPageTests : PageTest
         var pageContent = await Page.ContentAsync();
         Assert.That(pageContent, Does.Contain("10000"));
         Assert.That(pageContent, Does.Contain("9000"));
+
+        // スクリーンショットを撮影
+        await Page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = $"screenshots/orders-bulk-discount.png",
+            FullPage = true
+        });
     }
 }
