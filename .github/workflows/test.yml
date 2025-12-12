@@ -61,7 +61,7 @@ jobs:
           reporter: dotnet-trx
 
       - name: Install Playwright browsers
-        run: npx playwright install chromium
+        run: pwsh BlazorApp.E2ETests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
 
       - name: Run E2E tests
         run: dotnet test BlazorApp.E2ETests/BlazorApp.E2ETests.csproj --no-build --configuration Release --verbosity normal

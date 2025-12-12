@@ -50,7 +50,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: Install Playwright browsers
-        run: npx playwright install chromium
+        run: pwsh BlazorApp.E2ETests/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
 
       - name: Run E2E tests
         run: dotnet test BlazorApp.E2ETests/BlazorApp.E2ETests.csproj --no-build --verbosity normal
