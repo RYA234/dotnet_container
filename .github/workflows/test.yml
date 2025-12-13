@@ -146,21 +146,21 @@ jobs:
             console.log(`Found ${screenshots.length} screenshots`);
 
             // コメント作成
-            let comment = '## 📸 E2E Test Screenshots\n\n';
-            comment += `Found **${screenshots.length}** screenshot(s) from E2E tests.\n\n`;
-            comment += `Screenshots are available in the [playwright-screenshots artifact](${context.payload.repository.html_url}/actions/runs/${context.runId}).\n\n`;
-            comment += `### Screenshot List:\n\n`;
+            let comment = '## 📸 E2Eテストのスクリーンショット\n\n';
+            comment += `E2Eテストから **${screenshots.length}件** のスクリーンショットが生成されました。\n\n`;
+            comment += `スクリーンショットは [playwright-screenshots アーティファクト](${context.payload.repository.html_url}/actions/runs/${context.runId}) から確認できます。\n\n`;
+            comment += `### スクリーンショット一覧:\n\n`;
 
             for (const screenshot of screenshots) {
               comment += `- \`${screenshot.name}\`\n`;
             }
 
             comment += `\n---\n\n`;
-            comment += `💡 **How to view screenshots:**\n`;
-            comment += `1. Go to the [workflow run](${context.payload.repository.html_url}/actions/runs/${context.runId})\n`;
-            comment += `2. Scroll down to "Artifacts"\n`;
-            comment += `3. Download "playwright-screenshots"\n`;
-            comment += `4. Extract and view the PNG files\n`;
+            comment += `💡 **スクリーンショットの確認方法:**\n`;
+            comment += `1. [ワークフロー実行ページ](${context.payload.repository.html_url}/actions/runs/${context.runId}) にアクセス\n`;
+            comment += `2. 下にスクロールして「Artifacts」セクションを表示\n`;
+            comment += `3. 「playwright-screenshots」をダウンロード\n`;
+            comment += `4. ZIPファイルを解凍してPNGファイルを確認\n`;
 
             // PRにコメント投稿
             await github.rest.issues.createComment({
