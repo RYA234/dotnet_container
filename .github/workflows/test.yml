@@ -114,3 +114,67 @@ jobs:
             **/screenshots/
           retention-days: 30
           if-no-files-found: warn
+
+      - name: Post screenshots to PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // スクリーンショットディレクトリを検索
+            const screenshotDirs = [
+              'screenshots',
+              'BlazorApp.E2ETests/bin/Release/net10.0/screenshots',
+              'BlazorApp.E2ETests/bin/Debug/net10.0/screenshots'
+            ];
+
+            let screenshots = [];
+            for (const dir of screenshotDirs) {
+              if (fs.existsSync(dir)) {
+                const files = fs.readdirSync(dir).filter(f => f.endsWith('.png'));
+                screenshots.push(...files.map(f => path.join(dir, f)));
+              }
+            }
+
+            if (screenshots.length === 0) {
+              console.log('No screenshots found');
+              return;
+            }
+
+            // スクリーンショットをBase64エンコードしてアップロード
+            let comment = '## 📸 E2E Test Screenshots\n\n';
+            comment += `Found ${screenshots.length} screenshot(s) from E2E tests:\n\n`;
+
+            for (const screenshot of screenshots.slice(0, 10)) { // 最大10枚まで
+              const filename = path.basename(screenshot);
+              const content = fs.readFileSync(screenshot);
+
+              try {
+                // GitHubにアップロード
+                const uploadResponse = await github.rest.repos.createOrUpdateFileContents({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  path: `.github/temp-screenshots/${context.runId}/${filename}`,
+                  message: `Upload screenshot ${filename}`,
+                  content: content.toString('base64'),
+                  branch: context.payload.pull_request.head.ref
+                });
+
+                // 画像のURLを取得
+                const imageUrl = `https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/${context.payload.pull_request.head.ref}/.github/temp-screenshots/${context.runId}/${filename}`;
+                comment += `### ${filename}\n![${filename}](${imageUrl})\n\n`;
+              } catch (error) {
+                console.log(`Failed to upload ${filename}: ${error.message}`);
+                comment += `- ❌ ${filename} (upload failed)\n`;
+              }
+            }
+
+            // PRにコメント投稿
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
