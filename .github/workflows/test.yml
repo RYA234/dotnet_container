@@ -59,3 +59,113 @@ jobs:
           name: Test Results
           path: '**/test-results.trx'
           reporter: dotnet-trx
+
+      - name: Install Playwright browsers
+        run: pwsh BlazorApp.E2ETests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+      - name: Start application
+        run: |
+          cd src/BlazorApp
+          nohup dotnet run --no-build --configuration Release --urls "http://localhost:5000" > app.log 2>&1 &
+          echo $! > app.pid
+
+      - name: Wait for application to start
+        run: |
+          echo "Waiting for application to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:5000/dotnet > /dev/null; then
+              echo "Application is ready!"
+              exit 0
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+          echo "Application failed to start"
+          cat src/BlazorApp/app.log
+          exit 1
+
+      - name: Run E2E tests
+        run: dotnet test BlazorApp.E2ETests/BlazorApp.E2ETests.csproj --no-build --configuration Release --verbosity normal
+        continue-on-error: true
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -f src/BlazorApp/app.pid ]; then
+            kill $(cat src/BlazorApp/app.pid) || true
+          fi
+
+      - name: Upload application logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-logs
+          path: src/BlazorApp/app.log
+          retention-days: 7
+
+      - name: Upload E2E test screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-screenshots
+          path: |
+            screenshots/
+            BlazorApp.E2ETests/screenshots/
+            **/screenshots/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Post screenshots to PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // スクリーンショットディレクトリを検索
+            const screenshotDirs = [
+              'screenshots',
+              'BlazorApp.E2ETests/bin/Release/net10.0/screenshots',
+              'BlazorApp.E2ETests/bin/Debug/net10.0/screenshots'
+            ];
+
+            let screenshots = [];
+            for (const dir of screenshotDirs) {
+              if (fs.existsSync(dir)) {
+                const dirFiles = fs.readdirSync(dir).filter(f => f.endsWith('.png'));
+                screenshots.push(...dirFiles.map(f => ({ path: path.join(dir, f), name: f })));
+              }
+            }
+
+            if (screenshots.length === 0) {
+              console.log('No screenshots found');
+              return;
+            }
+
+            console.log(`Found ${screenshots.length} screenshots`);
+
+            // コメント作成
+            let comment = '## 📸 E2Eテストのスクリーンショット\n\n';
+            comment += `E2Eテストから **${screenshots.length}件** のスクリーンショットが生成されました。\n\n`;
+            comment += `スクリーンショットは [playwright-screenshots アーティファクト](${context.payload.repository.html_url}/actions/runs/${context.runId}) から確認できます。\n\n`;
+            comment += `### スクリーンショット一覧:\n\n`;
+
+            for (const screenshot of screenshots) {
+              comment += `- \`${screenshot.name}\`\n`;
+            }
+
+            comment += `\n---\n\n`;
+            comment += `💡 **スクリーンショットの確認方法:**\n`;
+            comment += `1. [ワークフロー実行ページ](${context.payload.repository.html_url}/actions/runs/${context.runId}) にアクセス\n`;
+            comment += `2. 下にスクロールして「Artifacts」セクションを表示\n`;
+            comment += `3. 「playwright-screenshots」をダウンロード\n`;
+            comment += `4. ZIPファイルを解凍してPNGファイルを確認\n`;
+
+            // PRにコメント投稿
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
