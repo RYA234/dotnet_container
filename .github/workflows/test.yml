@@ -123,6 +123,16 @@ jobs:
             const fs = require('fs');
             const path = require('path');
 
+            // 変更されたファイルを取得
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+
+            const changedFiles = files.map(f => f.filename);
+            console.log('Changed files:', changedFiles);
+
             // スクリーンショットディレクトリを検索
             const screenshotDirs = [
               'screenshots',
@@ -143,11 +153,40 @@ jobs:
               return;
             }
 
-            // スクリーンショットをBase64エンコードしてアップロード
-            let comment = '## 📸 E2E Test Screenshots\n\n';
-            comment += `Found ${screenshots.length} screenshot(s) from E2E tests:\n\n`;
+            // 変更されたテストファイルに関連するスクリーンショットをフィルタリング
+            const changedTestFiles = changedFiles.filter(f =>
+              f.includes('E2ETests') && f.endsWith('.cs')
+            );
 
-            for (const screenshot of screenshots.slice(0, 10)) { // 最大10枚まで
+            let relevantScreenshots = screenshots;
+            if (changedTestFiles.length > 0) {
+              // テストファイル名からスクリーンショットの関連性を判定
+              const testNames = changedTestFiles.map(f => {
+                const basename = path.basename(f, '.cs');
+                return basename.replace('Tests', '').toLowerCase();
+              });
+
+              relevantScreenshots = screenshots.filter(s => {
+                const filename = path.basename(s).toLowerCase();
+                return testNames.some(name => filename.includes(name));
+              });
+
+              console.log('Relevant screenshots based on changed files:', relevantScreenshots);
+            }
+
+            // コメント作成
+            let comment = '## 📸 E2E Test Screenshots\n\n';
+
+            if (changedTestFiles.length > 0) {
+              comment += `**Changed test files:** ${changedTestFiles.join(', ')}\n\n`;
+              comment += `Found ${relevantScreenshots.length} relevant screenshot(s) from changed tests:\n\n`;
+            } else {
+              comment += `Found ${screenshots.length} screenshot(s) from E2E tests:\n\n`;
+            }
+
+            const screenshotsToShow = changedTestFiles.length > 0 ? relevantScreenshots : screenshots;
+
+            for (const screenshot of screenshotsToShow.slice(0, 10)) { // 最大10枚まで
               const filename = path.basename(screenshot);
               const content = fs.readFileSync(screenshot);
 
@@ -169,6 +208,12 @@ jobs:
                 console.log(`Failed to upload ${filename}: ${error.message}`);
                 comment += `- ❌ ${filename} (upload failed)\n`;
               }
+            }
+
+            // 全スクリーンショットへのリンクを追加
+            if (changedTestFiles.length > 0 && relevantScreenshots.length < screenshots.length) {
+              comment += `\n---\n\n`;
+              comment += `**Note:** ${screenshots.length - relevantScreenshots.length} other screenshot(s) available in [workflow artifacts](${context.payload.repository.html_url}/actions/runs/${context.runId})\n`;
             }
 
             // PRにコメント投稿
