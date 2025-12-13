@@ -115,6 +115,100 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
+      - name: Generate screenshot report
+        if: github.event_name == 'pull_request' && always()
+        run: |
+          # スクリーンショットディレクトリを検索
+          SCREENSHOT_DIRS=("screenshots" "BlazorApp.E2ETests/bin/Release/net10.0/screenshots" "BlazorApp.E2ETests/bin/Debug/net10.0/screenshots")
+
+          # HTMLレポートを作成
+          mkdir -p screenshot-report
+          cat > screenshot-report/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="ja">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>E2E Test Screenshots</title>
+            <style>
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #0d1117;
+                color: #c9d1d9;
+              }
+              h1 {
+                border-bottom: 1px solid #30363d;
+                padding-bottom: 10px;
+              }
+              .screenshot-container {
+                margin: 30px 0;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 20px;
+                background-color: #161b22;
+              }
+              .screenshot-title {
+                font-size: 18px;
+                font-weight: 600;
+                margin-bottom: 15px;
+                color: #58a6ff;
+              }
+              img {
+                max-width: 100%;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+              }
+              .metadata {
+                margin-top: 10px;
+                font-size: 14px;
+                color: #8b949e;
+              }
+            </style>
+          </head>
+          <body>
+            <h1>📸 E2E Test Screenshots</h1>
+          EOF
+
+          # スクリーンショットを探してHTMLに追加
+          for dir in "${SCREENSHOT_DIRS[@]}"; do
+            if [ -d "$dir" ]; then
+              for screenshot in "$dir"/*.png; do
+                if [ -f "$screenshot" ]; then
+                  filename=$(basename "$screenshot")
+                  # スクリーンショットをBase64エンコード
+                  base64_img=$(base64 -w 0 "$screenshot" 2>/dev/null || base64 "$screenshot")
+
+                  cat >> screenshot-report/index.html << EOF
+            <div class="screenshot-container">
+              <div class="screenshot-title">$filename</div>
+              <img src="data:image/png;base64,$base64_img" alt="$filename">
+              <div class="metadata">Path: $screenshot</div>
+            </div>
+          EOF
+                fi
+              done
+            fi
+          done
+
+          cat >> screenshot-report/index.html << 'EOF'
+          </body>
+          </html>
+          EOF
+
+          echo "Screenshot report generated at screenshot-report/index.html"
+
+      - name: Upload screenshot report
+        uses: actions/upload-artifact@v4
+        if: github.event_name == 'pull_request' && always()
+        with:
+          name: screenshot-report
+          path: screenshot-report/
+          retention-days: 30
+
       - name: Post screenshots to PR
         if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
@@ -143,8 +237,8 @@ jobs:
             let screenshots = [];
             for (const dir of screenshotDirs) {
               if (fs.existsSync(dir)) {
-                const files = fs.readdirSync(dir).filter(f => f.endsWith('.png'));
-                screenshots.push(...files.map(f => path.join(dir, f)));
+                const dirFiles = fs.readdirSync(dir).filter(f => f.endsWith('.png'));
+                screenshots.push(...dirFiles.map(f => path.join(dir, f)));
               }
             }
 
@@ -174,32 +268,28 @@ jobs:
               console.log('Relevant screenshots based on changed files:', relevantScreenshots);
             }
 
-            // コメント作成（Base64埋め込み形式）
+            // コメント作成
             let comment = '## 📸 E2E Test Screenshots\n\n';
 
             if (changedTestFiles.length > 0) {
               comment += `**Changed test files:** ${changedTestFiles.join(', ')}\n\n`;
-              comment += `Found ${relevantScreenshots.length} relevant screenshot(s) from changed tests:\n\n`;
+              comment += `Found **${relevantScreenshots.length}** relevant screenshot(s) from changed tests:\n\n`;
             } else {
-              comment += `Found ${screenshots.length} screenshot(s) from E2E tests:\n\n`;
+              comment += `Found **${screenshots.length}** screenshot(s) from E2E tests:\n\n`;
             }
 
             const screenshotsToShow = changedTestFiles.length > 0 ? relevantScreenshots : screenshots;
 
-            // スクリーンショットをBase64エンコードして直接埋め込み
-            for (const screenshot of screenshotsToShow.slice(0, 5)) { // 最大5枚まで（サイズ制限対策）
+            // スクリーンショットをリスト表示
+            for (const screenshot of screenshotsToShow) {
               const filename = path.basename(screenshot);
-              const content = fs.readFileSync(screenshot);
-              const base64 = content.toString('base64');
-
-              comment += `<details>\n<summary>${filename}</summary>\n\n`;
-              comment += `![${filename}](data:image/png;base64,${base64})\n\n`;
-              comment += `</details>\n\n`;
+              comment += `- \`${filename}\`\n`;
             }
 
-            // 全スクリーンショットへのリンクを追加
             comment += `\n---\n\n`;
-            comment += `📦 All ${screenshots.length} screenshot(s) available in [workflow artifacts](${context.payload.repository.html_url}/actions/runs/${context.runId})\n`;
+            comment += `### 🖼️ View Screenshots\n\n`;
+            comment += `**[📊 Open Screenshot Report](${context.payload.repository.html_url}/actions/runs/${context.runId})** - Click "screenshot-report" artifact and open \`index.html\` to view all screenshots with images\n\n`;
+            comment += `Or download individual screenshots from the [playwright-screenshots artifact](${context.payload.repository.html_url}/actions/runs/${context.runId})\n`;
 
             // PRにコメント投稿
             await github.rest.issues.createComment({
