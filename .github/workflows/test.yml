@@ -174,7 +174,7 @@ jobs:
               console.log('Relevant screenshots based on changed files:', relevantScreenshots);
             }
 
-            // コメント作成
+            // コメント作成（Base64埋め込み形式）
             let comment = '## 📸 E2E Test Screenshots\n\n';
 
             if (changedTestFiles.length > 0) {
@@ -186,35 +186,20 @@ jobs:
 
             const screenshotsToShow = changedTestFiles.length > 0 ? relevantScreenshots : screenshots;
 
-            for (const screenshot of screenshotsToShow.slice(0, 10)) { // 最大10枚まで
+            // スクリーンショットをBase64エンコードして直接埋め込み
+            for (const screenshot of screenshotsToShow.slice(0, 5)) { // 最大5枚まで（サイズ制限対策）
               const filename = path.basename(screenshot);
               const content = fs.readFileSync(screenshot);
+              const base64 = content.toString('base64');
 
-              try {
-                // GitHubにアップロード
-                const uploadResponse = await github.rest.repos.createOrUpdateFileContents({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  path: `.github/temp-screenshots/${context.runId}/${filename}`,
-                  message: `Upload screenshot ${filename}`,
-                  content: content.toString('base64'),
-                  branch: context.payload.pull_request.head.ref
-                });
-
-                // 画像のURLを取得
-                const imageUrl = `https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/${context.payload.pull_request.head.ref}/.github/temp-screenshots/${context.runId}/${filename}`;
-                comment += `### ${filename}\n![${filename}](${imageUrl})\n\n`;
-              } catch (error) {
-                console.log(`Failed to upload ${filename}: ${error.message}`);
-                comment += `- ❌ ${filename} (upload failed)\n`;
-              }
+              comment += `<details>\n<summary>${filename}</summary>\n\n`;
+              comment += `![${filename}](data:image/png;base64,${base64})\n\n`;
+              comment += `</details>\n\n`;
             }
 
             // 全スクリーンショットへのリンクを追加
-            if (changedTestFiles.length > 0 && relevantScreenshots.length < screenshots.length) {
-              comment += `\n---\n\n`;
-              comment += `**Note:** ${screenshots.length - relevantScreenshots.length} other screenshot(s) available in [workflow artifacts](${context.payload.repository.html_url}/actions/runs/${context.runId})\n`;
-            }
+            comment += `\n---\n\n`;
+            comment += `📦 All ${screenshots.length} screenshot(s) available in [workflow artifacts](${context.payload.repository.html_url}/actions/runs/${context.runId})\n`;
 
             // PRにコメント投稿
             await github.rest.issues.createComment({
