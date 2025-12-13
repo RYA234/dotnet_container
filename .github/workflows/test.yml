@@ -115,31 +115,57 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
-      - name: Collect screenshots for PR comment
-        if: github.event_name == 'pull_request' && always()
-        id: collect-screenshots
-        run: |
-          # スクリーンショットディレクトリを検索
-          SCREENSHOT_DIRS=("screenshots" "BlazorApp.E2ETests/bin/Release/net10.0/screenshots" "BlazorApp.E2ETests/bin/Debug/net10.0/screenshots")
-
-          # すべてのスクリーンショットを一時ディレクトリに集める
-          mkdir -p pr-screenshots
-
-          for dir in "${SCREENSHOT_DIRS[@]}"; do
-            if [ -d "$dir" ]; then
-              cp "$dir"/*.png pr-screenshots/ 2>/dev/null || true
-            fi
-          done
-
-          # スクリーンショット数を確認
-          count=$(ls -1 pr-screenshots/*.png 2>/dev/null | wc -l)
-          echo "Found $count screenshots"
-          echo "screenshot_count=$count" >> $GITHUB_OUTPUT
-
       - name: Post screenshots to PR
-        if: github.event_name == 'pull_request' && always() && steps.collect-screenshots.outputs.screenshot_count > 0
-        uses: edunad/actions-image@v2.0.3
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
         with:
-          path: 'pr-screenshots/*.png'
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          title: '📸 E2E Test Screenshots'
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // スクリーンショットディレクトリを検索
+            const screenshotDirs = [
+              'screenshots',
+              'BlazorApp.E2ETests/bin/Release/net10.0/screenshots',
+              'BlazorApp.E2ETests/bin/Debug/net10.0/screenshots'
+            ];
+
+            let screenshots = [];
+            for (const dir of screenshotDirs) {
+              if (fs.existsSync(dir)) {
+                const dirFiles = fs.readdirSync(dir).filter(f => f.endsWith('.png'));
+                screenshots.push(...dirFiles.map(f => ({ path: path.join(dir, f), name: f })));
+              }
+            }
+
+            if (screenshots.length === 0) {
+              console.log('No screenshots found');
+              return;
+            }
+
+            console.log(`Found ${screenshots.length} screenshots`);
+
+            // コメント作成
+            let comment = '## 📸 E2E Test Screenshots\n\n';
+            comment += `Found **${screenshots.length}** screenshot(s) from E2E tests.\n\n`;
+            comment += `Screenshots are available in the [playwright-screenshots artifact](${context.payload.repository.html_url}/actions/runs/${context.runId}).\n\n`;
+            comment += `### Screenshot List:\n\n`;
+
+            for (const screenshot of screenshots) {
+              comment += `- \`${screenshot.name}\`\n`;
+            }
+
+            comment += `\n---\n\n`;
+            comment += `💡 **How to view screenshots:**\n`;
+            comment += `1. Go to the [workflow run](${context.payload.repository.html_url}/actions/runs/${context.runId})\n`;
+            comment += `2. Scroll down to "Artifacts"\n`;
+            comment += `3. Download "playwright-screenshots"\n`;
+            comment += `4. Extract and view the PNG files\n`;
+
+            // PRにコメント投稿
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
