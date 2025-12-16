@@ -1,0 +1,98 @@
+name: 🚀 Feature Request
+description: Propose a new feature or enhancement
+title: "[FEATURE] "
+labels: ["enhancement", "priority:medium"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this feature request!
+        
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: What category does this feature belong to?
+      options:
+        - Education Demo
+        - Business System
+        - WinForms Migration
+        - Infrastructure
+        - Documentation
+        - Testing
+        - Other
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature?
+      options:
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+      
+  - type: textarea
+    id: overview
+    attributes:
+      label: Overview
+      description: Brief description of the feature
+      placeholder: What does this feature do?
+    validations:
+      required: true
+      
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why do we need this feature?
+      placeholder: What problem does it solve?
+    validations:
+      required: true
+      
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Implementation Tasks
+      description: List of tasks to complete this feature
+      placeholder: |
+        - [ ] Create design documents
+        - [ ] Implement Service
+        - [ ] Implement Controller
+        - [ ] Create Views
+        - [ ] Write tests
+      value: |
+        - [ ] Create design documents (requirements.md, external-design.md, internal-design.md)
+        - [ ] Implement Service layer
+        - [ ] Implement Controller
+        - [ ] Create Views (if applicable)
+        - [ ] Write xUnit tests
+        - [ ] Write E2E tests
+        - [ ] Update documentation
+    validations:
+      required: true
+      
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: What needs to be done for this to be considered complete?
+      placeholder: |
+        - [ ] Design and code match
+        - [ ] Test coverage 80%+
+        - [ ] Works in production
+    validations:
+      required: true
+      
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Links to design docs, related issues, etc.
+      placeholder: |
+        - Design doc: .github/docs/features/feature-name/
+        - Related issue: #123

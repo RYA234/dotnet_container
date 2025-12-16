@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 GitHub Discussions
+    url: https://github.com/RYA234/dotnet_container/discussions
+    about: Ask questions and discuss ideas
+  - name: 📖 Documentation
+    url: https://github.com/RYA234/dotnet_container/tree/main/.github/docs
+    about: Read the project documentation
+  - name: 🌐 Live Site
+    url: https://rya234.com/dotnet
+    about: Visit the deployed application
