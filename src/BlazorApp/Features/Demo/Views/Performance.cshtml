@@ -1,0 +1,165 @@
+@{
+    ViewData["Title"] = "SQLパフォーマンスデモ";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">⚡ SQLパフォーマンスデモ</h1>
+    <p class="lead">データベースアクセスの性能問題を体感できるデモ</p>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h4 mb-0">N+1問題デモ</h2>
+        </div>
+        <div class="card-body">
+            <p>ORMでよく発生するN+1問題を実際に体験できるAPIエンドポイントです。</p>
+
+            <h3 class="h5 mt-4">📚 N+1問題とは？</h3>
+            <p>N+1問題は、ORMを使用する際に発生する典型的なパフォーマンス問題です：</p>
+            <ol>
+                <li><strong>1回目のクエリ</strong>: 親エンティティ（ユーザー）を取得 → 100件取得</li>
+                <li><strong>N回のクエリ</strong>: ループ内で各ユーザーの関連エンティティ（部署）を個別に取得 → 100回クエリ発行</li>
+                <li><strong>合計</strong>: 1 + 100 = <strong>101回のSQL発行</strong> 🐌</li>
+            </ol>
+
+            <p>この問題は、Eager Loadingで解決できます：</p>
+            <ul>
+                <li><strong>Bad</strong>: <code>Users.ToListAsync()</code> → ループで <code>Departments.Find(id)</code></li>
+                <li><strong>Good</strong>: <code>Users.Include(u => u.Department).ToListAsync()</code> → 1回のJOINクエリ ⚡</li>
+            </ul>
+
+            <h3 class="h5 mt-4">🔌 エンドポイント</h3>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>エンドポイント</th>
+                            <th>説明</th>
+                            <th>クエリ数</th>
+                            <th>アクション</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>GET /api/demo/n-plus-one/bad</code></td>
+                            <td>N+1問題あり（非効率）</td>
+                            <td><span class="badge bg-danger">101回</span></td>
+                            <td><button class="btn btn-sm btn-danger" onclick="testNPlusOneBad()">テスト実行</button></td>
+                        </tr>
+                        <tr>
+                            <td><code>GET /api/demo/n-plus-one/good</code></td>
+                            <td>最適化済み（効率的）</td>
+                            <td><span class="badge bg-success">1回</span></td>
+                            <td><button class="btn btn-sm btn-success" onclick="testNPlusOneGood()">テスト実行</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 class="h5 mt-4">💻 実行結果</h3>
+            <div id="result-bad" class="mb-3" style="display: none;">
+                <h4 class="h6">Bad (N+1問題あり)</h4>
+                <pre id="result-bad-content" class="bg-light p-3 rounded"></pre>
+            </div>
+            <div id="result-good" style="display: none;">
+                <h4 class="h6">Good (最適化済み)</h4>
+                <pre id="result-good-content" class="bg-light p-3 rounded"></pre>
+            </div>
+
+            <h3 class="h5 mt-4">🔍 性能比較</h3>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>メトリクス</th>
+                            <th>Bad (N+1)</th>
+                            <th>Good (Eager Loading)</th>
+                            <th>改善率</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>SQL発行回数</td>
+                            <td>101回</td>
+                            <td>1回</td>
+                            <td><strong class="text-success">99%削減</strong> ✨</td>
+                        </tr>
+                        <tr>
+                            <td>実行時間</td>
+                            <td>~45ms</td>
+                            <td>~12ms</td>
+                            <td><strong class="text-success">73%高速化</strong> ⚡</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-muted"><small><strong>注意</strong>: InMemoryデータベースのため実行時間差は小さいですが、SQL Serverでは数十倍の差が出ることもあります。</small></p>
+
+            <h3 class="h5 mt-4">🎓 学習ポイント</h3>
+            <p>このデモでは以下を学べます：</p>
+            <ol>
+                <li><strong>N+1問題の発生原因</strong>: ループ内での個別クエリ発行</li>
+                <li><strong>解決方法</strong>: Entity Framework CoreのInclude()によるEager Loading</li>
+                <li><strong>性能測定</strong>: SQL発行回数と実行時間の比較</li>
+            </ol>
+
+            <h4 class="h6 mt-3">実装例</h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="text-danger">Bad: N+1問題あり</h5>
+                    <pre class="bg-light p-3 rounded"><code>// Bad: N+1問題あり
+var users = await context.Users.ToListAsync();
+foreach (var user in users) {
+    var dept = await context.Departments
+        .FindAsync(user.DepartmentId);
+}</code></pre>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="text-success">Good: 最適化済み</h5>
+                    <pre class="bg-light p-3 rounded"><code>// Good: 最適化済み
+var users = await context.Users
+    .Include(u => u.Department)
+    .ToListAsync();</code></pre>
+                </div>
+            </div>
+
+            <h3 class="h5 mt-4">⚙️ SQL Server向けセットアップ（オプション）</h3>
+            <p>本番環境でSQL Serverを使用する場合は、以下のSQLファイルを実行してください:</p>
+            <pre class="bg-light p-3 rounded"><code># 1. テーブル作成
+sqlcmd -S your-server -d your-database -i sql/demo/n-plus-one/01_ddl.sql
+
+# 2. ダミーデータ投入（100ユーザー、10部署）
+sqlcmd -S your-server -d your-database -i sql/demo/n-plus-one/02_insert.sql</code></pre>
+            <p class="text-muted"><small><strong>デフォルト設定</strong>: InMemoryデータベースを使用しているため、SQLファイルの実行は不要です。アプリケーション起動時に自動的にダミーデータが生成されます。</small></p>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a href="~/Demo/Index" class="btn btn-secondary">← デモ一覧に戻る</a>
+    </div>
+</div>
+
+<script>
+async function testNPlusOneBad() {
+    try {
+        const response = await fetch('/dotnet/api/demo/n-plus-one/bad');
+        const data = await response.json();
+        document.getElementById('result-bad-content').textContent = JSON.stringify(data, null, 2);
+        document.getElementById('result-bad').style.display = 'block';
+    } catch (error) {
+        document.getElementById('result-bad-content').textContent = 'Error: ' + error.message;
+        document.getElementById('result-bad').style.display = 'block';
+    }
+}
+
+async function testNPlusOneGood() {
+    try {
+        const response = await fetch('/dotnet/api/demo/n-plus-one/good');
+        const data = await response.json();
+        document.getElementById('result-good-content').textContent = JSON.stringify(data, null, 2);
+        document.getElementById('result-good').style.display = 'block';
+    } catch (error) {
+        document.getElementById('result-good-content').textContent = 'Error: ' + error.message;
+        document.getElementById('result-good').style.display = 'block';
+    }
+}
+</script>

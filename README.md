@@ -5,6 +5,10 @@ ASP.NET Core 8.0とMVCを使用したWebアプリケーション。AWS ECS Farga
 ## 🚀 機能
 
 - **ASP.NET Core 8.0** + **MVC (Model-View-Controller)**
+- **3つの大分類でページ構成**
+  - 🎓 エンジニア教育用デモ（SQLパフォーマンス、エラーハンドリング、セキュリティ等）
+  - 🏢 基幹システム（在庫管理、販売管理、生産管理）
+  - 🖥️ WinFormsマイグレーション（電卓画面）
 - パスベースルーティング対応 (`/dotnet`)
 - AWS ECS Fargate上で動作
 - GitHub Actionsによる自動デプロイ
@@ -216,17 +220,33 @@ GitHub Actionsのワークフローが:
 │       │   │   ├── HomeController.cs
 │       │   │   └── Views/
 │       │   │       └── Index.cshtml      # トップ（/dotnet）
-│       │   ├── Calculator/
+│       │   ├── Demo/                     # 🎓 エンジニア教育用デモ
+│       │   │   ├── DemoController.cs
+│       │   │   ├── Services/
+│       │   │   │   └── NPlusOneService.cs
+│       │   │   └── Views/
+│       │   │       ├── Index.cshtml      # デモ一覧
+│       │   │       ├── Performance.cshtml # SQLパフォーマンス ✅
+│       │   │       ├── ErrorHandling.cshtml # エラーハンドリング 🚧
+│       │   │       ├── Security.cshtml   # セキュリティ 🚧
+│       │   │       └── DataStructures.cshtml # データ構造 🚧
+│       │   ├── Inventory/                # 🏢 在庫管理
+│       │   │   ├── InventoryController.cs
+│       │   │   └── Views/
+│       │   │       └── Index.cshtml
+│       │   ├── Sales/                    # 🏢 販売管理
+│       │   │   ├── SalesController.cs
+│       │   │   └── Views/
+│       │   │       └── Index.cshtml
+│       │   ├── Production/               # 🏢 生産管理
+│       │   │   ├── ProductionController.cs
+│       │   │   └── Views/
+│       │   │       └── Index.cshtml
+│       │   ├── Calculator/               # 🖥️ 電卓（WinFormsマイグレーション）
 │       │   │   ├── CalculatorController.cs
 │       │   │   ├── CalculatorService.cs
 │       │   │   └── Views/
-│       │   │       └── Index.cshtml      # /calculator
-│       │   ├── Orders/
-│       │   │   ├── OrdersController.cs
-│       │   │   ├── OrderService.cs
-│       │   │   ├── PricingService.cs
-│       │   │   └── Views/
-│       │   │       └── Index.cshtml      # /orders
+│       │   │       └── Index.cshtml
 │       │   └── Supabase/
 │       │       ├── SupabaseService.cs
 │       │       └── ISupabaseService.cs
@@ -255,6 +275,40 @@ GitHub Actionsのワークフローが:
 ├── dotnet_container.sln
 └── README.md
 ```
+
+## 🎯 ページ構成
+
+アプリケーションは**3つの大分類**で構成されています（[画面遷移図](.github/docs/screen-transition.md)参照）：
+
+### 🎓 エンジニア教育用デモ
+
+将来教育担当になったときに使える実践的なデモ集。口頭説明より実際に動くコードで理解してもらい、繰り返し使える教材として整備。
+
+| デモ | URL | ステータス | 概要 |
+|------|-----|------------|------|
+| **デモ一覧** | `/dotnet/Demo/Index` | ✅ | 全デモの概要と学習ポイント |
+| **SQLパフォーマンス** | `/dotnet/Demo/Performance` | ✅ 実装済み | N+1問題のデモと最適化手法 |
+| **エラーハンドリング** | `/dotnet/Demo/ErrorHandling` | 🚧 未実装 | 例外処理のベストプラクティス |
+| **セキュリティ** | `/dotnet/Demo/Security` | 🚧 未実装 | OWASP Top 10に基づく脆弱性デモ |
+| **データ構造** | `/dotnet/Demo/DataStructures` | 🚧 未実装 | データ構造のパフォーマンス比較 |
+
+### 🏢 基幹システム
+
+業務システムの基本機能を実装予定。
+
+| 機能 | URL | ステータス | 概要 |
+|------|-----|------------|------|
+| **在庫管理** | `/dotnet/Inventory/Index` | 🚧 未実装 | 商品マスタ、在庫数量、入出庫履歴 |
+| **販売管理** | `/dotnet/Sales/Index` | 🚧 未実装 | 売上伝票、請求書、売上レポート |
+| **生産管理** | `/dotnet/Production/Index` | 🚧 未実装 | 生産計画、製造指示、進捗管理 |
+
+### 🖥️ WinFormsからのマイグレーション
+
+レガシーWinFormsアプリケーションのWeb化。
+
+| 機能 | URL | ステータス | 概要 |
+|------|-----|------------|------|
+| **電卓画面** | `/dotnet/Calculator/Index` | ✅ 実装済み | 四則演算を行うシンプルな電卓 |
 
 ## 🔧 設定
 
@@ -287,9 +341,11 @@ app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }));
 
 このアプリケーションには、データベースアクセスの性能問題を体感できるデモAPIが含まれています。
 
+**デモページ**: [/dotnet/Demo/Performance](https://rya234.com/dotnet/Demo/Performance)
+
 ### N+1問題デモ
 
-ORMでよく発生するN+1問題を実際に体験できるAPIエンドポイントです。
+ORMでよく発生するN+1問題を実際に体験できるAPIエンドポイントです。Webページからボタン一つで実行できます。
 
 #### 📚 N+1問題とは？
 

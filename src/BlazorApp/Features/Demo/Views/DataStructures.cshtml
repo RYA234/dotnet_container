@@ -1,0 +1,71 @@
+@{
+    ViewData["Title"] = "データ構造とアルゴリズムデモ";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">📊 データ構造とアルゴリズムデモ</h1>
+    <p class="lead">データ構造のパフォーマンス比較を学ぶ</p>
+
+    <div class="alert alert-warning">
+        <h4 class="alert-heading">🚧 このページは未実装です</h4>
+        <p class="mb-0">将来、以下の内容を実装予定：</p>
+        <ul class="mt-2">
+            <li>時間計算量（Time Complexity）の基礎</li>
+            <li>Big O記法（O(1), O(n), O(log n), O(n²)）</li>
+            <li>ハッシュテーブルの仕組み</li>
+            <li>適切なデータ構造の選択基準</li>
+        </ul>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">🎯 実装予定デモ</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>カテゴリ</th>
+                                    <th>比較対象</th>
+                                    <th>学習ポイント</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>検索</strong></td>
+                                    <td>List.Contains() vs HashSet.Contains()</td>
+                                    <td>O(n) vs O(1) の違い</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>ソート</strong></td>
+                                    <td>バブルソート vs クイックソート</td>
+                                    <td>O(n²) vs O(n log n) の違い</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>選択</strong></td>
+                                    <td>List vs LinkedList、Dictionary vs SortedDictionary</td>
+                                    <td>用途に応じた最適な選択</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h4 class="h6 mt-4">📈 性能測定例</h4>
+                    <p>10,000件のデータで検索を実行した場合：</p>
+                    <ul>
+                        <li><code>List.Contains()</code>: ~5ms（全件スキャン）</li>
+                        <li><code>HashSet.Contains()</code>: ~0.001ms（ハッシュ検索）</li>
+                        <li><strong>約5000倍の性能差！</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="~/Demo/Index" class="btn btn-secondary">← デモ一覧に戻る</a>
+    </div>
+</div>

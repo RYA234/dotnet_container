@@ -1,0 +1,63 @@
+@{
+    ViewData["Title"] = "セキュリティデモ";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">🔒 セキュリティデモ</h1>
+    <p class="lead">OWASP Top 10に基づく脆弱性と対策を学ぶ</p>
+
+    <div class="alert alert-warning">
+        <h4 class="alert-heading">🚧 このページは未実装です</h4>
+        <p class="mb-0">将来、以下の内容を実装予定：</p>
+        <ul class="mt-2">
+            <li>SQLインジェクションの仕組みと対策（パラメータ化クエリ）</li>
+            <li>XSSの種類（Reflected, Stored, DOM-based）と対策</li>
+            <li>CSRF攻撃とAnti-CSRFトークン</li>
+            <li>セキュアコーディングの原則</li>
+        </ul>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">🎯 実装予定デモ</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>脆弱性</th>
+                                    <th>Vulnerable（脆弱）</th>
+                                    <th>Secure（安全）</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>SQLインジェクション</strong></td>
+                                    <td>文字列連結でSQL構築</td>
+                                    <td>パラメータ化クエリ</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>XSS</strong></td>
+                                    <td>生のHTML出力</td>
+                                    <td>HTMLエンコード + CSP</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>CSRF</strong></td>
+                                    <td>トークンなし</td>
+                                    <td>Anti-CSRFトークン</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="~/Demo/Index" class="btn btn-secondary">← デモ一覧に戻る</a>
+    </div>
+</div>
