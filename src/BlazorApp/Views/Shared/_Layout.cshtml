@@ -1,31 +1,71 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - BlazorApp</title>
+    <title>@ViewData["Title"] - ASP.NET Core MVC</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
 <body>
-    <header>
-        <nav style="background-color: #333; padding: 15px;">
-            <ul style="list-style: none; margin: 0; padding: 0; display: flex; gap: 20px;">
-                <li><a href="~/Home/Index" style="color: white; text-decoration: none;">Home</a></li>
-                <li><a href="~/Calculator/Index" style="color: white; text-decoration: none;">Calculator</a></li>
-                <li><a href="~/Orders/Index" style="color: white; text-decoration: none;">Orders</a></li>
-                <li><a href="~/Demo/Index" style="color: white; text-decoration: none;">Demo</a></li>
-            </ul>
-        </nav>
-    </header>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="~/Home/Index">🏠 ASP.NET MVC</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="~/Home/Index">ホーム</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownEducation" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            🎓 エンジニア教育用
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdownEducation">
+                            <li><a class="dropdown-item" href="~/Demo/Index">デモ一覧</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="~/Demo/Performance">✅ SQLパフォーマンス</a></li>
+                            <li><a class="dropdown-item" href="~/Demo/ErrorHandling">🚧 エラーハンドリング</a></li>
+                            <li><a class="dropdown-item" href="~/Demo/Security">🚧 セキュリティ</a></li>
+                            <li><a class="dropdown-item" href="~/Demo/DataStructures">🚧 データ構造とアルゴリズム</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownCore" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            🏢 基幹システム
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdownCore">
+                            <li><a class="dropdown-item" href="~/Inventory/Index">📦 在庫管理</a></li>
+                            <li><a class="dropdown-item" href="~/Sales/Index">💰 販売管理</a></li>
+                            <li><a class="dropdown-item" href="~/Production/Index">🏭 生産管理</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMigration" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            🖥️ WinFormsマイグレーション
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdownMigration">
+                            <li><a class="dropdown-item" href="~/Calculator/Index">✅ 電卓画面</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-    <main style="padding: 20px;">
+    <main class="container-fluid" style="padding: 20px;">
         @RenderBody()
     </main>
 
-    <footer style="margin-top: 50px; padding: 20px; background-color: #f0f0f0; text-align: center;">
-        <p>&copy; 2024 - BlazorApp (Migrated to ASP.NET Core MVC)</p>
+    <footer class="mt-5 py-3 bg-light text-center">
+        <div class="container">
+            <p class="mb-0">&copy; 2024 - ASP.NET Core MVC Application</p>
+        </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

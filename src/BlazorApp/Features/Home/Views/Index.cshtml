@@ -1,22 +1,118 @@
 @{
-    ViewData["Title"] = "Home";
+    ViewData["Title"] = "ホーム";
 }
 
-<h1>Welcome to ASP.NET Core MVC</h1>
+<div class="container mt-4">
+    <h1 class="mb-4">🏠 ASP.NET Core MVC アプリケーション</h1>
+    <p class="lead">このアプリケーションは3つの大分類で構成されています</p>
 
-<p>This application has been migrated from Blazor Server to ASP.NET Core MVC.</p>
+    <div class="row mt-5">
+        <!-- エンジニア教育用 -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h2 class="h4 mb-0">🎓 エンジニア教育用</h2>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">将来教育担当になったときに使える実践的なデモ集</p>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <a href="~/Demo/Performance" class="btn btn-outline-danger btn-sm w-100 text-start">
+                                ✅ SQLパフォーマンス
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="~/Demo/ErrorHandling" class="btn btn-outline-secondary btn-sm w-100 text-start">
+                                🚧 エラーハンドリング
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="~/Demo/Security" class="btn btn-outline-secondary btn-sm w-100 text-start">
+                                🚧 セキュリティ
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="~/Demo/DataStructures" class="btn btn-outline-secondary btn-sm w-100 text-start">
+                                🚧 データ構造とアルゴリズム
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
 
-<h3>Available Features:</h3>
+        <!-- 基幹システム -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-success">
+                <div class="card-header bg-success text-white">
+                    <h2 class="h4 mb-0">🏢 基幹システム</h2>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">業務システムの基本機能</p>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <a href="~/Inventory/Index" class="btn btn-outline-secondary btn-sm w-100 text-start">
+                                🚧 在庫管理
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="~/Sales/Index" class="btn btn-outline-secondary btn-sm w-100 text-start">
+                                🚧 販売管理
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="~/Production/Index" class="btn btn-outline-secondary btn-sm w-100 text-start">
+                                🚧 生産管理
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
 
-<ul>
-    <li><a asp-controller="Calculator" asp-action="Index">Calculator</a> - Basic arithmetic operations</li>
-    <li><a asp-controller="Orders" asp-action="Index">Orders</a> - Order price calculator with discount</li>
-    <li><a asp-controller="Demo" asp-action="Index">Demo</a> - Database performance demonstrations (N+1 problem)</li>
-</ul>
+        <!-- WinFormsからのマイグレーション -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h2 class="h4 mb-0">🖥️ WinFormsマイグレーション</h2>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">レガシーアプリケーションのWeb化</p>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <a href="~/Calculator/Index" class="btn btn-outline-warning btn-sm w-100 text-start">
+                                ✅ 電卓画面
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<h3>API Endpoints:</h3>
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">🔧 システム情報</h3>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li><a href="/dotnet/healthz" target="_blank">ヘルスチェック</a> - システム稼働状況</li>
+                        <li><a href="/dotnet/supabase/test" target="_blank">Supabase接続テスト</a> - データベース接続確認</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-<ul>
-    <li><a href="/healthz">/healthz</a> - Health check endpoint</li>
-    <li><a href="/supabase/test">/supabase/test</a> - Supabase connection test</li>
-</ul>
+<style>
+    .card {
+        transition: transform 0.2s;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+</style>

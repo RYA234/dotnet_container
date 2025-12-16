@@ -1,0 +1,61 @@
+@{
+    ViewData["Title"] = "在庫管理";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">📦 在庫管理</h1>
+    <p class="lead">商品マスタと在庫数量を管理</p>
+
+    <div class="alert alert-warning">
+        <h4 class="alert-heading">🚧 このページは未実装です</h4>
+        <p class="mb-0">将来、以下の機能を実装予定：</p>
+        <ul class="mt-2">
+            <li>商品マスタ管理（登録・更新・削除）</li>
+            <li>在庫数量管理（入出庫処理）</li>
+            <li>入出庫履歴の照会</li>
+            <li>在庫アラート（在庫切れ・過剰在庫の通知）</li>
+        </ul>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">📋 商品マスタ</h3>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">商品情報の登録・更新・削除</p>
+                    <button class="btn btn-secondary btn-sm" disabled>管理画面へ</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">📊 在庫照会</h3>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">現在の在庫状況を確認</p>
+                    <button class="btn btn-secondary btn-sm" disabled>在庫一覧へ</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">📝 入出庫履歴</h3>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">過去の入出庫記録を照会</p>
+                    <button class="btn btn-secondary btn-sm" disabled>履歴へ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="~/Home/Index" class="btn btn-outline-primary">← ホームに戻る</a>
+    </div>
+</div>

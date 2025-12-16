@@ -14,10 +14,30 @@ public class DemoController : Controller
         _logger = logger;
     }
 
-    // MVC View Action
+    // MVC View Actions
     public IActionResult Index()
     {
         return View("~/Features/Demo/Views/Index.cshtml");
+    }
+
+    public IActionResult Performance()
+    {
+        return View("~/Features/Demo/Views/Performance.cshtml");
+    }
+
+    public IActionResult ErrorHandling()
+    {
+        return View("~/Features/Demo/Views/ErrorHandling.cshtml");
+    }
+
+    public IActionResult Security()
+    {
+        return View("~/Features/Demo/Views/Security.cshtml");
+    }
+
+    public IActionResult DataStructures()
+    {
+        return View("~/Features/Demo/Views/DataStructures.cshtml");
     }
 
     // API Endpoints
