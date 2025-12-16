@@ -1,0 +1,63 @@
+@{
+    ViewData["Title"] = "エラーハンドリングデモ";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">🚨 エラーハンドリングデモ</h1>
+    <p class="lead">例外処理のベストプラクティスを学ぶ</p>
+
+    <div class="alert alert-warning">
+        <h4 class="alert-heading">🚧 このページは未実装です</h4>
+        <p class="mb-0">将来、以下の内容を実装予定：</p>
+        <ul class="mt-2">
+            <li>try-catch-finallyの正しい使い方</li>
+            <li>例外の種類と使い分け</li>
+            <li>カスタム例外の設計</li>
+            <li>ログ出力のベストプラクティス</li>
+            <li>リトライ戦略（Exponential Backoff）</li>
+            <li>Circuit Breakerパターン</li>
+        </ul>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="h5 mb-0">❌ Bad: 例外握りつぶし</h3>
+                </div>
+                <div class="card-body">
+                    <pre class="bg-light p-3 rounded"><code>try {
+    // 危険な処理
+    await SomeRiskyOperation();
+}
+catch {
+    // 何もしない（例外を握りつぶす）
+}</code></pre>
+                    <p class="text-danger small mb-0">問題点: エラーが発生しても分からず、デバッグが困難</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h3 class="h5 mb-0">✅ Good: 適切なエラーハンドリング</h3>
+                </div>
+                <div class="card-body">
+                    <pre class="bg-light p-3 rounded"><code>try {
+    await SomeRiskyOperation();
+}
+catch (Exception ex) {
+    _logger.LogError(ex, "処理に失敗しました");
+    throw; // 再スロー
+}</code></pre>
+                    <p class="text-success small mb-0">ログに記録し、上位層で適切に処理</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="~/Demo/Index" class="btn btn-secondary">← デモ一覧に戻る</a>
+    </div>
+</div>
