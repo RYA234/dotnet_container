@@ -3,15 +3,16 @@
 ## 文書情報
 - **作成日**: 2025-12-12
 - **最終更新**: 2026-01-06
-- **バージョン**: 1.1
+- **バージョン**: 1.2
 - **ステータス**: 実装済み
 
 ## 変更履歴
 
-| 日付 | バージョン | 変更者 | 変更内容 |
-|------|----------|--------|----------|
-| 2025-12-12 | 1.0 | - | 初版作成 |
-| 2026-01-06 | 1.1 | - | レビュー指摘事項を反映（フォルダ構造修正、実装状況明記） |
+| 日付 | バージョン | 変更内容 |
+|------|----------|----------|
+| 2025-12-12 | 1.0 | 初版作成 |
+| 2026-01-06 | 1.1 | レビュー指摘事項を反映（フォルダ構造修正、実装状況明記） |
+| 2026-01-06 | 1.2 | アーキテクチャ設計に集中、詳細は各設計書へ委譲 |
 
 ---
 
@@ -138,58 +139,26 @@ graph TD
 
 ---
 
-### 2.2 フォルダ構造
+### 2.2 設計原則
 
-> **注意:** プロジェクト名は `BlazorApp` ですが、実際は ASP.NET Core MVC アプリケーションです（歴史的経緯による名称）。
-
-```
-src/BlazorApp/
-├── Features/               # 機能ごとに分類（Feature-based Architecture）
-│   ├── Demo/              # デモ機能（エンジニア教育用）
-│   │   ├── DemoController.cs    # Controller（Controllersフォルダは使用しない）
-│   │   ├── Services/            # NPlusOneService.cs, SelectStarService.cs, etc.
-│   │   ├── Models/              # DTO, Request, Response
-│   │   └── Views/               # Razor Views
-│   │
-│   ├── Home/              # ホーム機能
-│   │   ├── HomeController.cs    # Controller
-│   │   └── Views/               # Index.cshtml
-│   │
-│   ├── ReleaseNotes/      # リリースノート機能
-│   │   ├── ReleaseNotesController.cs  # Controller
-│   │   ├── Services/            # ReleaseNotesService.cs
-│   │   └── Views/               # Index.cshtml
-│   │
-│   ├── Calculator/        # 計算機能
-│   │   ├── CalculatorController.cs
-│   │   ├── CalculatorService.cs
-│   │   └── Views/
-│   │
-│   ├── Orders/            # 注文機能
-│   │   ├── OrdersController.cs
-│   │   ├── OrderService.cs
-│   │   └── Views/
-│   │
-│   └── Supabase/          # Supabase連携
-│       ├── SupabaseService.cs
-│       └── ISupabaseService.cs
-│
-├── Shared/                # 共通コンポーネント
-│   ├── Middleware/        # 例外処理、認証
-│   ├── Filters/           # アクションフィルター
-│   └── Extensions/        # 拡張メソッド
-│
-├── Infrastructure/        # インフラストラクチャ層
-│   ├── Database/          # DB接続管理
-│   └── External/          # 外部サービス連携
-│
-└── Program.cs             # エントリーポイント、DI設定
-```
-
-**設計原則**:
-- 機能ごとにフォルダを分ける（Feature-based）
-- 技術レイヤーごとに分けない（Controller/ Services/ Models/ を別フォルダにしない）
+**Feature-based Architecture の特徴:**
+- 機能ごとにフォルダを分ける
+- 技術レイヤーごとに分けない（Controllers/, Services/, Models/ を別フォルダにしない）
 - 各機能は独立して開発・テスト可能
+
+**フォルダ構造の例:**
+```
+Features/
+├── Demo/              # デモ機能
+│   ├── DemoController.cs
+│   ├── Services/
+│   ├── Models/
+│   └── Views/
+├── Home/              # ホーム機能
+└── Orders/            # 注文機能
+```
+
+> **詳細:** [内部設計 - ディレクトリ構造](../internal-design/README.md)
 
 ---
 
@@ -354,64 +323,29 @@ graph LR
 
 ---
 
-## 6. 監視・ログ
+## 6. 監視・ログ（概要）
 
-### 6.1 ログレベル
+### 6.1 ログ戦略
 
-| レベル | 用途 | 例 |
-|--------|------|-----|
-| Error | エラー発生時 | DB接続失敗、例外発生 |
-| Warning | 警告事項 | リトライ実行、タイムアウト |
-| Information | 重要な処理 | API呼び出し、SQL実行時間 |
-| Debug | デバッグ情報 | 変数の値、条件分岐 |
+- **ログレベル**: Error, Warning, Information, Debug
+- **出力先**: CloudWatch Logs
+- **構造化ログ**: Serilog を使用
+
+> **詳細:** [共通設計 - ログ設計](logging.md)
 
 ---
 
-### 6.2 メトリクス監視
+### 6.2 監視戦略
 
-**実装状況:**
-- [x] CloudWatch Logs: 実装済み（ECSタスクログ自動収集）
-- [ ] CloudWatch Metrics（カスタム）: 未実装
-- [ ] CloudWatch Alarms: 未実装
-- [ ] SNS通知: 未実装
+**実装済み:**
+- CloudWatch Logs (タスクログ自動収集)
 
-**Phase 1（実装済み）:**
+**計画中:**
+- カスタムメトリクス（CPU, メモリ, レスポンスタイム）
+- CloudWatch Alarms
+- SNS 通知
 
-```mermaid
-graph LR
-    App[ASP.NET Core App]
-    CloudWatch[CloudWatch Logs]
-
-    App -->|ログ出力| CloudWatch
-```
-
-- ECS タスクログ → CloudWatch Logs Group
-- ログレベル: Error, Warning, Information, Debug
-- ログの保持期間: 7日間
-
-**Phase 2（計画中）:**
-
-```mermaid
-graph LR
-    App[ASP.NET Core App]
-    CloudWatch[CloudWatch Logs]
-    Metrics[CloudWatch Metrics]
-    Alarm[CloudWatch Alarms]
-    SNS[SNS通知]
-
-    App -->|ログ出力| CloudWatch
-    App -->|メトリクス送信| Metrics
-    Metrics -->|閾値超過| Alarm
-    Alarm -->|通知| SNS
-```
-
-**監視項目（計画）:**
-- CPU使用率 (> 80%)
-- メモリ使用率 (> 80%)
-- エラーレート (> 1%)
-- レスポンスタイム (> 500ms)
-- SQLクエリ実行時間 (> 100ms)
-- API呼び出し回数
+> **詳細:** [運用設計 - 監視](../operations/monitoring/README.md)
 
 ---
 
