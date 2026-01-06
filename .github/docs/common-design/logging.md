@@ -35,665 +35,279 @@
 
 ---
 
-## 2. 構造化ログ
+## ログフォーマット
 
-### 2.1 ILogger を使用した構造化ログ
+### 開発環境（可読性重視）
 
-```csharp
-public class UserService : IUserService
-{
-    private readonly ILogger<UserService> _logger;
-
-    public UserService(ILogger<UserService> logger)
-    {
-        _logger = logger;
-    }
-
-    public async Task<User> CreateUser(CreateUserRequest request)
-    {
-        // ❌ NG: 文字列連結
-        _logger.LogInformation($"Creating user: {request.Name}, {request.Email}");
-
-        // ✅ OK: 構造化ログ（パラメータ使用）
-        _logger.LogInformation("Creating user: {UserName}, {Email}",
-            request.Name, request.Email);
-
-        try
-        {
-            var user = await CreateUserInDatabase(request);
-
-            // ✅ OK: 成功ログ
-            _logger.LogInformation("User created successfully: {UserId}, {Email}",
-                user.Id, user.Email);
-
-            return user;
-        }
-        catch (Exception ex)
-        {
-            // ✅ OK: エラーログ（例外オブジェクトを渡す）
-            _logger.LogError(ex, "Failed to create user: {Email}", request.Email);
-            throw;
-        }
-    }
-
-    public async Task<User> GetUserById(int id)
-    {
-        _logger.LogDebug("Getting user by id: {UserId}", id);
-
-        var user = await GetUserFromDatabase(id);
-
-        if (user == null)
-        {
-            // ✅ OK: 警告ログ
-            _logger.LogWarning("User not found: {UserId}", id);
-            throw new NotFoundException("User", id.ToString());
-        }
-
-        return user;
-    }
-}
 ```
+[HH:mm:ss INF] User created: UserId=123, Email=user@example.com
+[HH:mm:ss ERR] Database connection failed: ConnectionString=Server=***
+```
+
+**形式**: テキスト形式、色付き出力（Console）
 
 ---
 
-### 2.2 ログ出力例（JSON形式）
+### 本番環境（機械可読性重視）
 
 ```json
 {
   "timestamp": "2025-12-12T10:00:00.123Z",
   "level": "Information",
-  "message": "User created successfully: {UserId}, {Email}",
+  "message": "User created",
   "properties": {
     "UserId": 123,
-    "Email": "user@example.com",
-    "SourceContext": "BlazorApp.Features.User.UserService",
+    "Email": "use***@example.com",
     "RequestId": "0HMN8J9K7L6M5N4O3P2Q1R0S",
-    "RequestPath": "/api/users",
-    "Method": "POST"
+    "SourceContext": "BlazorApp.Features.User.UserService"
   }
 }
 ```
 
+**形式**: JSON形式（CloudWatch Logs で検索・分析しやすい）
+
 ---
 
-## 3. Serilog 設定
+## ログ出力先
 
-### 3.1 Serilog のインストール
+| 環境 | 出力先 | 保存期間 | フォーマット | 用途 |
+|------|--------|---------|------------|------|
+| **開発** | Console | - | テキスト | デバッグ |
+| **開発** | File (`logs/app-.log`) | 7日 | テキスト | ローカル調査 |
+| **本番** | AWS CloudWatch Logs | 30日 | JSON | 監視・分析 |
+| **本番** | S3 (アーカイブ) | 1年 | JSON.gz | 長期保存 |
 
-```bash
-dotnet add package Serilog.AspNetCore
-dotnet add package Serilog.Sinks.Console
-dotnet add package Serilog.Sinks.File
-dotnet add package Serilog.Sinks.Seq
-dotnet add package Serilog.Enrichers.Environment
-dotnet add package Serilog.Enrichers.Thread
+### CloudWatch Logs グループ構成
+
+```
+/ecs/dotnet-app/application  # アプリケーションログ
+/ecs/dotnet-app/error        # エラーログ（フィルタ済み）
+/ecs/dotnet-app/audit        # 監査ログ（認証・認可）
+/ecs/dotnet-app/performance  # パフォーマンスログ
 ```
 
 ---
 
-### 3.2 Serilog の設定（Program.cs）
+## ログ出力タイミング
 
+### 必須ログ出力タイミング
+
+**いつログを出すか？** フローチャートで確認
+
+```mermaid
+flowchart TD
+    Start([処理開始]) --> Log1[Information: 処理開始ログ<br/>LogInformation]
+    Log1 --> Process[処理実行]
+    Process --> Check{エラー発生?}
+    
+    Check -->|Yes| LogError[Error: エラーログ<br/>LogError with Exception]
+    LogError --> End1([処理終了 - 失敗])
+    
+    Check -->|No| CheckTime{時間かかった?<br/>100ms超}
+    CheckTime -->|Yes| LogWarn[Warning: 遅延警告<br/>LogWarning]
+    LogWarn --> Log2[Information: 処理終了ログ<br/>LogInformation]
+    
+    CheckTime -->|No| Log2
+    Log2 --> End2([処理終了 - 成功])
+    
+    style Log1 fill:#d4edda
+    style LogError fill:#f8d7da
+    style LogWarn fill:#fff3cd
+    style Log2 fill:#d4edda
+```
+
+**3つの基本パターン**:
+
+| パターン | ログレベル | タイミング | 例 |
+|---------|----------|----------|-----|
+| 1️⃣ **処理の開始・終了** | Information | メソッド開始時・終了時 | `Creating user`, `User created` |
+| 2️⃣ **エラー発生** | Error | catch ブロック内 | `Failed to create user` |
+| 3️⃣ **警告事象** | Warning | 条件判定後 | `Slow query: 150ms` |
+
+#### 1. **処理の開始・終了**（Information）
 ```csharp
-using Serilog;
-using Serilog.Events;
+_logger.LogInformation("Creating user: {Email}", request.Email);
+// 処理実行
+_logger.LogInformation("User created: {UserId}", user.Id);
+```
 
-// Serilog 設定
-Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Debug()
-    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
-    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-    .Enrich.FromLogContext()
-    .Enrich.WithMachineName()
-    .Enrich.WithThreadId()
-    .Enrich.WithEnvironmentName()
-    .WriteTo.Console(outputTemplate:
-        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
-    .WriteTo.File(
-        path: "logs/app-.log",
-        rollingInterval: RollingInterval.Day,
-        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
-        retainedFileCountLimit: 30)
-    .WriteTo.Seq("http://localhost:5341")  // Seq サーバー（ログ可視化ツール）
-    .CreateLogger();
-
-try
-{
-    Log.Information("Starting web application");
-
-    var builder = WebApplication.CreateBuilder(args);
-
-    // Serilog を使用
-    builder.Host.UseSerilog();
-
-    // ... その他の設定
-
-    var app = builder.Build();
-
-    // リクエストログ
-    app.UseSerilogRequestLogging(options =>
-    {
-        options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000}ms";
-        options.GetLevel = (httpContext, elapsed, ex) => ex != null
-            ? LogEventLevel.Error
-            : httpContext.Response.StatusCode > 499
-                ? LogEventLevel.Error
-                : LogEventLevel.Information;
-        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
-        {
-            diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
-            diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
-            diagnosticContext.Set("UserAgent", httpContext.Request.Headers["User-Agent"].ToString());
-            diagnosticContext.Set("RemoteIP", httpContext.Connection.RemoteIpAddress);
-        };
-    });
-
-    app.Run();
-}
+#### 2. **エラー発生時**（Error）
+```csharp
 catch (Exception ex)
 {
-    Log.Fatal(ex, "Application terminated unexpectedly");
-}
-finally
-{
-    Log.CloseAndFlush();
+    _logger.LogError(ex, "Failed to create user: {Email}", request.Email);
+    throw;
 }
 ```
 
----
-
-### 3.3 appsettings.json での設定
-
-```json
+#### 3. **警告すべき事象**（Warning）
+```csharp
+if (sw.ElapsedMilliseconds > 100)
 {
-  "Serilog": {
-    "Using": ["Serilog.Sinks.Console", "Serilog.Sinks.File"],
-    "MinimumLevel": {
-      "Default": "Information",
-      "Override": {
-        "Microsoft": "Warning",
-        "Microsoft.AspNetCore": "Warning",
-        "System": "Warning"
-      }
-    },
-    "WriteTo": [
-      {
-        "Name": "Console",
-        "Args": {
-          "outputTemplate": "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"
-        }
-      },
-      {
-        "Name": "File",
-        "Args": {
-          "path": "logs/app-.log",
-          "rollingInterval": "Day",
-          "retainedFileCountLimit": 30,
-          "outputTemplate": "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
-        }
-      }
-    ],
-    "Enrich": ["FromLogContext", "WithMachineName", "WithThreadId"]
-  }
+    _logger.LogWarning("Slow query: {ElapsedMs}ms", sw.ElapsedMilliseconds);
 }
 ```
 
----
+**補足**:
+- DB操作前は Debug、実行後は Information + 時間測定
+- 時間のかかる処理（100ms超）は Warning で警告
 
-## 4. ログのベストプラクティス
+### 出力頻度の制限
 
-### 4.1 ログ出力の推奨パターン
+**ループ内での大量ログ出力を避ける**:
 
 ```csharp
-public class OrderService : IOrderService
+// ❌ NG: 1000件のループで毎回ログ
+foreach (var user in users)
 {
-    private readonly ILogger<OrderService> _logger;
-
-    public async Task<Order> CreateOrder(CreateOrderRequest request)
-    {
-        // ✅ OK: 処理開始ログ（Debug）
-        _logger.LogDebug("Creating order: {UserId}, {ItemCount}",
-            request.UserId, request.Items.Count);
-
-        var stopwatch = Stopwatch.StartNew();
-
-        try
-        {
-            // ビジネスロジック
-            var order = await ProcessOrder(request);
-
-            stopwatch.Stop();
-
-            // ✅ OK: 成功ログ（Information）+ パフォーマンス測定
-            _logger.LogInformation(
-                "Order created successfully: {OrderId}, {UserId}, {TotalAmount}, {ElapsedMs}ms",
-                order.Id, request.UserId, order.TotalAmount, stopwatch.ElapsedMilliseconds);
-
-            return order;
-        }
-        catch (Exception ex)
-        {
-            stopwatch.Stop();
-
-            // ✅ OK: エラーログ（Error）+ 例外オブジェクト
-            _logger.LogError(ex,
-                "Failed to create order: {UserId}, {ItemCount}, {ElapsedMs}ms",
-                request.UserId, request.Items.Count, stopwatch.ElapsedMilliseconds);
-
-            throw;
-        }
-    }
-
-    private async Task<Order> ProcessOrder(CreateOrderRequest request)
-    {
-        // ✅ OK: 重要な処理ステップをログ出力
-        _logger.LogInformation("Validating order items: {ItemCount}", request.Items.Count);
-
-        await ValidateItems(request.Items);
-
-        _logger.LogInformation("Calculating total amount: {UserId}", request.UserId);
-
-        var totalAmount = CalculateTotalAmount(request.Items);
-
-        _logger.LogInformation("Saving order to database: {UserId}, {TotalAmount}",
-            request.UserId, totalAmount);
-
-        var order = await SaveOrderToDatabase(request, totalAmount);
-
-        return order;
-    }
+    _logger.LogDebug("Processing user: {UserId}", user.Id);
 }
-```
 
----
-
-### 4.2 パフォーマンス測定ログ
-
-```csharp
-using System.Diagnostics;
-
-public class PerformanceLoggingService
+// ✅ OK: バッチ処理後に1回ログ
+_logger.LogInformation("Processing {UserCount} users", users.Count);
+foreach (var user in users)
 {
-    private readonly ILogger<PerformanceLoggingService> _logger;
-
-    public async Task<T> MeasureAsync<T>(
-        string operationName,
-        Func<Task<T>> operation,
-        Dictionary<string, object>? parameters = null)
-    {
-        var stopwatch = Stopwatch.StartNew();
-
-        _logger.LogDebug("Starting operation: {OperationName}, {Parameters}",
-            operationName, parameters);
-
-        try
-        {
-            var result = await operation();
-            stopwatch.Stop();
-
-            // ✅ OK: パフォーマンスログ
-            _logger.LogInformation(
-                "Operation completed: {OperationName}, {ElapsedMs}ms, {Parameters}",
-                operationName, stopwatch.ElapsedMilliseconds, parameters);
-
-            // 遅い処理を警告
-            if (stopwatch.ElapsedMilliseconds > 1000)
-            {
-                _logger.LogWarning(
-                    "Slow operation detected: {OperationName}, {ElapsedMs}ms, {Parameters}",
-                    operationName, stopwatch.ElapsedMilliseconds, parameters);
-            }
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            stopwatch.Stop();
-
-            _logger.LogError(ex,
-                "Operation failed: {OperationName}, {ElapsedMs}ms, {Parameters}",
-                operationName, stopwatch.ElapsedMilliseconds, parameters);
-
-            throw;
-        }
-    }
+    // 処理のみ（ログ出力なし）
 }
-
-// 使用例
-var result = await _performanceLogger.MeasureAsync(
-    "GetUserOrders",
-    async () => await _orderRepository.GetUserOrders(userId),
-    new Dictionary<string, object> { ["UserId"] = userId });
+_logger.LogInformation("Processed {UserCount} users in {ElapsedMs}ms", 
+    users.Count, stopwatch.ElapsedMilliseconds);
 ```
 
 ---
 
-### 4.3 SQL実行ログ
+## クラス図
 
-```csharp
-public class DatabaseLogger
-{
-    private readonly ILogger<DatabaseLogger> _logger;
-
-    public async Task<T> ExecuteQueryAsync<T>(
-        string sql,
-        Dictionary<string, object> parameters,
-        Func<Task<T>> queryExecutor)
-    {
-        var stopwatch = Stopwatch.StartNew();
-
-        // ✅ OK: SQL実行ログ（Debug）
-        _logger.LogDebug("Executing SQL: {Sql}, {Parameters}", sql, parameters);
-
-        try
-        {
-            var result = await queryExecutor();
-            stopwatch.Stop();
-
-            // ✅ OK: SQL実行時間ログ（Information）
-            _logger.LogInformation("SQL executed successfully: {ElapsedMs}ms, {Sql}",
-                stopwatch.ElapsedMilliseconds, sql);
-
-            // 遅いクエリを警告
-            if (stopwatch.ElapsedMilliseconds > 100)
-            {
-                _logger.LogWarning("Slow SQL detected: {ElapsedMs}ms, {Sql}, {Parameters}",
-                    stopwatch.ElapsedMilliseconds, sql, parameters);
-            }
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            stopwatch.Stop();
-
-            _logger.LogError(ex, "SQL execution failed: {ElapsedMs}ms, {Sql}, {Parameters}",
-                stopwatch.ElapsedMilliseconds, sql, parameters);
-
-            throw;
-        }
-    }
-}
-```
-
----
-
-## 5. セキュリティログ
-
-### 5.1 認証・認可ログ
-
-```csharp
-public class AuthService : IAuthService
-{
-    private readonly ILogger<AuthService> _logger;
-
-    public async Task<AuthResult> SignIn(string email, string password)
-    {
-        _logger.LogInformation("Sign-in attempt: {Email}", email);
-
-        try
-        {
-            var result = await _authClient.SignIn(email, password);
-
-            // ✅ OK: 認証成功ログ
-            _logger.LogInformation("Sign-in successful: {Email}, {UserId}",
-                email, result.User.Id);
-
-            return result;
-        }
-        catch (UnauthorizedException ex)
-        {
-            // ✅ OK: 認証失敗ログ（Warning）
-            _logger.LogWarning("Sign-in failed: {Email}, {Reason}",
-                email, "Invalid credentials");
-
-            throw;
-        }
+```mermaid
+classDiagram
+    class ILogger~T~ {
+        <<interface>>
+        +LogDebug(message, args)
+        +LogInformation(message, args)
+        +LogWarning(message, args)
+        +LogError(exception, message, args)
+        +LogCritical(exception, message, args)
     }
 
-    public async Task<bool> AuthorizeUser(int userId, string permission)
-    {
-        _logger.LogDebug("Authorization check: {UserId}, {Permission}",
-            userId, permission);
-
-        var hasPermission = await CheckPermission(userId, permission);
-
-        if (!hasPermission)
-        {
-            // ✅ OK: 認可失敗ログ（Warning）
-            _logger.LogWarning("Authorization denied: {UserId}, {Permission}",
-                userId, permission);
-        }
-
-        return hasPermission;
-    }
-}
-```
-
----
-
-### 5.2 秘密情報のマスキング
-
-```csharp
-public class SecureLogger
-{
-    private readonly ILogger<SecureLogger> _logger;
-
-    public void LogUserCreated(User user, string password)
-    {
-        // ❌ NG: パスワードをログ出力
-        _logger.LogInformation("User created: {Email}, {Password}", user.Email, password);
-
-        // ✅ OK: パスワードをマスキング
-        _logger.LogInformation("User created: {Email}, Password: ***", user.Email);
+    class UserService {
+        -ILogger~UserService~ _logger
+        +CreateUser(request) Task~User~
+        +GetUserById(id) Task~User~
     }
 
-    public void LogDatabaseConnection(string connectionString)
-    {
-        // ❌ NG: 接続文字列をそのまま出力
-        _logger.LogDebug("Connecting to database: {ConnectionString}", connectionString);
-
-        // ✅ OK: 接続文字列をマスキング
-        var maskedConnectionString = MaskConnectionString(connectionString);
-        _logger.LogDebug("Connecting to database: {MaskedConnectionString}",
-            maskedConnectionString);
+    class OrderService {
+        -ILogger~OrderService~ _logger
+        +CreateOrder(request) Task~Order~
+        +GetOrders(userId) Task~List~Order~~
     }
 
-    private static string MaskConnectionString(string connectionString)
-    {
-        // "Password=abc123" → "Password=***"
-        return Regex.Replace(connectionString,
-            @"(Password|Pwd)=[^;]+",
-            "$1=***",
-            RegexOptions.IgnoreCase);
+    class PerformanceLoggingService {
+        -ILogger~PerformanceLoggingService~ _logger
+        +MeasureAsync(operationName, operation, parameters) Task~T~
     }
-}
+
+    class SecureLogger {
+        -ILogger~SecureLogger~ _logger
+        +LogUserCreated(user, password) void
+        +LogDatabaseConnection(connectionString) void
+        -MaskConnectionString(connectionString) string
+        -MaskEmail(email) string
+    }
+
+    class DatabaseLogger {
+        -ILogger~DatabaseLogger~ _logger
+        +ExecuteQueryAsync(sql, parameters, queryExecutor) Task~T~
+    }
+
+    UserService --> ILogger~T~
+    OrderService --> ILogger~T~
+    PerformanceLoggingService --> ILogger~T~
+    SecureLogger --> ILogger~T~
+    DatabaseLogger --> ILogger~T~
 ```
 
 ---
 
-## 6. AWS CloudWatch Logs 統合
+## シーケンス図
 
-### 6.1 CloudWatch Logs Sink 設定
+### API呼び出しとログ出力
 
-```bash
-dotnet add package AWS.Logger.SeriLog
+```mermaid
+sequenceDiagram
+    participant Client as クライアント
+    participant Middleware as Serilog Middleware
+    participant Controller as UserController
+    participant Service as UserService
+    participant DB as データベース
+    participant Logger as ILogger
+
+    Client->>Middleware: POST /api/users
+    Middleware->>Logger: LogInformation("HTTP POST /api/users")
+    Middleware->>Controller: CreateUser(request)
+    
+    Controller->>Service: CreateUser(request)
+    Service->>Logger: LogDebug("Creating user: {Email}", email)
+    
+    Service->>DB: INSERT INTO Users
+    DB-->>Service: Success
+    
+    Service->>Logger: LogInformation("User created: {UserId}, {Email}", userId, email)
+    Service-->>Controller: User
+    
+    Controller-->>Middleware: 201 Created
+    Middleware->>Logger: LogInformation("HTTP POST /api/users responded 201 in 45ms")
+    Middleware-->>Client: 201 Created
 ```
 
-```csharp
-using AWS.Logger.SeriLog;
+### エラー発生時のログ出力
 
-// Program.cs
-Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Information()
-    .WriteTo.AWSSeriLog(
-        configuration: builder.Configuration,
-        textFormatter: new Serilog.Formatting.Json.JsonFormatter())
-    .CreateLogger();
+```mermaid
+sequenceDiagram
+    participant Controller as UserController
+    participant Service as UserService
+    participant DB as データベース
+    participant Logger as ILogger
+
+    Controller->>Service: CreateUser(request)
+    Service->>Logger: LogDebug("Creating user: {Email}", email)
+    
+    Service->>DB: INSERT INTO Users
+    DB-->>Service: Exception (Duplicate Email)
+    
+    Service->>Logger: LogError(ex, "Failed to create user: {Email}", email)
+    Service-->>Controller: throw Exception
+    
+    Controller->>Logger: LogWarning("User creation failed: {Email}", email)
+    Controller-->>Controller: Return 400 Bad Request
 ```
 
-**appsettings.json**:
-```json
-{
-  "AWS": {
-    "Region": "ap-northeast-1"
-  },
-  "AWS.Logging": {
-    "LogGroup": "/ecs/dotnet-app",
-    "Region": "ap-northeast-1"
-  }
-}
-```
+### パフォーマンス測定とログ出力
 
----
+```mermaid
+sequenceDiagram
+    participant Service as OrderService
+    participant PerfLogger as PerformanceLoggingService
+    participant DB as データベース
+    participant Logger as ILogger
 
-### 6.2 CloudWatch Logs クエリ例
-
-```
-# エラーログを検索
-fields @timestamp, level, message, exception
-| filter level = "Error"
-| sort @timestamp desc
-| limit 100
-
-# 遅いSQL検索
-fields @timestamp, ElapsedMs, Sql
-| filter ElapsedMs > 100
-| sort ElapsedMs desc
-| limit 50
-
-# 認証失敗を検索
-fields @timestamp, Email, Reason
-| filter message like "Sign-in failed"
-| stats count() by Email
-```
-
----
-
-## 7. ログ監視とアラート
-
-### 7.1 CloudWatch Alarms 設定
-
-```yaml
-# Terraform 例
-resource "aws_cloudwatch_log_metric_filter" "error_count" {
-  name           = "ErrorCount"
-  log_group_name = "/ecs/dotnet-app"
-  pattern        = "[timestamp, level=Error, ...]"
-
-  metric_transformation {
-    name      = "ErrorCount"
-    namespace = "DotnetApp"
-    value     = "1"
-  }
-}
-
-resource "aws_cloudwatch_metric_alarm" "high_error_rate" {
-  alarm_name          = "HighErrorRate"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "1"
-  metric_name         = "ErrorCount"
-  namespace           = "DotnetApp"
-  period              = "300"  # 5分間
-  statistic           = "Sum"
-  threshold           = "10"    # 5分間に10件以上エラー
-
-  alarm_actions = [aws_sns_topic.alerts.arn]
-}
+    Service->>PerfLogger: MeasureAsync("GetUserOrders", operation)
+    PerfLogger->>Logger: LogDebug("Starting operation: GetUserOrders")
+    PerfLogger->>PerfLogger: Stopwatch.Start()
+    
+    PerfLogger->>DB: Execute Query
+    DB-->>PerfLogger: Result
+    
+    PerfLogger->>PerfLogger: Stopwatch.Stop()
+    
+    alt 実行時間 > 1000ms
+        PerfLogger->>Logger: LogWarning("Slow operation: {ElapsedMs}ms")
+    else 実行時間 <= 1000ms
+        PerfLogger->>Logger: LogInformation("Operation completed: {ElapsedMs}ms")
+    end
+    
+    PerfLogger-->>Service: Result
 ```
 
 ---
 
-### 7.2 Seq を使用したログ可視化
-
-```bash
-# Seq を Docker で起動
-docker run -d --name seq -e ACCEPT_EULA=Y -p 5341:80 datalust/seq:latest
-```
-
-**ブラウザで Seq にアクセス**: `http://localhost:5341`
-
-**Seq のクエリ例**:
-- `Level = "Error"` - エラーログのみ表示
-- `ElapsedMs > 1000` - 1秒以上かかった処理を表示
-- `UserId = 123` - 特定ユーザーのログを表示
-
----
-
-## 8. ログローテーション
-
-### 8.1 ファイルログのローテーション
-
-```csharp
-// Serilog 設定
-.WriteTo.File(
-    path: "logs/app-.log",
-    rollingInterval: RollingInterval.Day,        // 日次ローテーション
-    retainedFileCountLimit: 30,                  // 30日分保持
-    fileSizeLimitBytes: 100_000_000,             // 100MB制限
-    rollOnFileSizeLimit: true,                   // サイズ超過時にローテーション
-    outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
-```
-
-**生成されるログファイル例**:
-```
-logs/app-20251212.log
-logs/app-20251211.log
-logs/app-20251210.log
-...
-```
-
----
-
-## 9. ログのベストプラクティス まとめ
-
-### 9.1 やるべきこと ✅
-
-1. **構造化ログを使用**
-   - `_logger.LogInformation("User created: {UserId}", userId)`
-
-2. **適切なログレベルを選択**
-   - Debug: デバッグ情報
-   - Information: 重要な処理
-   - Warning: 警告事項
-   - Error: エラー
-
-3. **例外オブジェクトを渡す**
-   - `_logger.LogError(ex, "Failed to create user")`
-
-4. **パフォーマンスを測定**
-   - `_logger.LogInformation("Query executed in {ElapsedMs}ms", sw.ElapsedMilliseconds)`
-
-5. **セキュリティイベントを記録**
-   - 認証成功/失敗、認可失敗
-
-6. **秘密情報をマスキング**
-   - パスワード、接続文字列、API キー
-
----
-
-### 9.2 やってはいけないこと ❌
-
-1. **文字列連結を使用**
-   - ❌ `_logger.LogInformation($"User: {userId}")`
-
-2. **ループ内で大量のログ出力**
-   - ❌ `foreach (var item in items) { _logger.LogDebug("Item: {Id}", item.Id); }`
-
-3. **秘密情報をそのまま出力**
-   - ❌ `_logger.LogInformation("Password: {Password}", password)`
-
-4. **本番環境で Debug ログを有効化**
-   - ❌ `"MinimumLevel": "Debug"` （本番は `"Information"` 以上）
-
-5. **例外を文字列で出力**
-   - ❌ `_logger.LogError($"Error: {ex.Message}")`
-
----
-
-## 10. 参考
-
-- [エラーハンドリング設計](error-handling.md)
-- [セキュリティ設計](security.md)
-- [API設計規約](api-design.md)
-- [Serilog Documentation](https://serilog.net/)
-- [AWS CloudWatch Logs](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/)
+# 参考
+設計の謎　p251
