@@ -27,16 +27,15 @@ graph TB
 
     subgraph "AWS Cloud"
         subgraph "ECS Cluster"
-            WebApp[ASP.NET Core MVC<br/>Docker Container]
+            subgraph "Docker Container"
+                WebApp[ASP.NET Core MVC]
+                SQLite[(SQLite<br/>ローカルデモ用)]
+            end
         end
+    end
 
-        subgraph "データベース層"
-            SQLite[(SQLite<br/>ローカルデモ用)]
-        end
-
-        subgraph "外部サービス"
-            Supabase[Supabase<br/>Auth & Storage]
-        end
+    subgraph "外部サービス"
+        Supabase[Supabase<br/>Auth & Storage]
     end
 
     Browser --> WebApp
@@ -84,8 +83,8 @@ graph LR
 ```
 
 **デプロイフロー**:
-1. 開発者が `git push` でコードをプッシュ
-2. GitHub Actions が自動ビルド・テスト実行
+1. 開発者が PR を作成し、main ブランチにマージ
+2. GitHub Actions が自動ビルド・テスト実行（CD開始）
 3. テスト成功後、Docker イメージを ECR にプッシュ
 4. ECS が新しいイメージをデプロイ
 5. ALB がトラフィックを新しいコンテナに切り替え
@@ -111,8 +110,8 @@ graph TD
     end
 
     subgraph "データアクセス層"
-        ADO[ADO.NET<br/>Raw SQL実行]
-        Connection[SqliteConnection<br/>NpgsqlConnection]
+        EFCore[Entity Framework Core<br/>ORM]
+        Connection[DbContext<br/>PostgreSQL / SQLite]
     end
 
     subgraph "データベース"
@@ -128,8 +127,8 @@ graph TD
     Controller --> Service
     Controller --> View
     Service --> Interface
-    Service --> ADO
-    ADO --> Connection
+    Service --> EFCore
+    EFCore --> Connection
     Connection --> DB
     Service --> Config
     Service --> Logger
@@ -233,14 +232,14 @@ graph LR
 |---------|------|----------|------|
 | Framework | ASP.NET Core MVC | 8.0 | Webアプリケーション |
 | Language | C# | 12.0 | プログラミング言語 |
-| Database Access | ADO.NET (Raw SQL) | - | データベースアクセス |
+| Database Access | Entity Framework Core | 8.0 | データベースアクセス（ORM） |
 | Database (本番) | PostgreSQL | 16.x | RDS on AWS |
 | Database (デモ) | SQLite | 3.x | ローカルデモ用 |
 | DI Container | Microsoft.Extensions.DependencyInjection | 8.0 | 依存性注入 |
 | Logging | ILogger (Serilog) | - | ログ出力 |
 | Configuration | appsettings.json + 環境変数 | - | 設定管理 |
 
-**ADO.NET採用理由**: [ADR-002: ORMを使わず素のSQLを採用](../adr/002-avoid-orm-use-raw-sql.md)
+**EF Core採用理由**: [ADR-003: Entity Framework Core を採用](../adr/003-use-ef-core.md)
 
 ---
 
@@ -286,13 +285,13 @@ graph LR
 
 | ツール | 用途 |
 |-------|------|
-| Visual Studio 2022 | IDE (Windows) |
-| Visual Studio Code | IDE (Mac/Linux) |
+| Visual Studio Code | IDE |
 | Docker Desktop | ローカル開発環境 |
 | xUnit | 単体テスト |
 | Playwright | E2Eテスト |
 | DocFx | APIドキュメント自動生成 |
 | GitHub Copilot | AI開発支援 |
+| Claude Code | AI開発支援（CLI） |
 
 ---
 
@@ -341,8 +340,13 @@ graph LR
 
 ## 5. デプロイ戦略
 
-### 5.1 
-なし
+### 5.1 デプロイ方式
+
+- **方式**: シングルタスク・デプロイ
+- **ECS タスク数**: 1
+- **手順**: GitHub Actions が ECR にイメージをプッシュ → ECS タスクを自動更新
+- **ダウンタイム**: あり（旧タスク停止 → 新タスク起動の間）
+- **理由**: シンプルな構成を優先
 ---
 
 ### 5.2 環境分離
@@ -427,17 +431,11 @@ graph LR
 
 ### ADR
 - [ADR-001: SQLiteを教育用デモに採用](../adr/001-use-sqlite-for-education.md)
-- [ADR-002: ORMを使わず素のSQLを採用](../adr/002-avoid-orm-use-raw-sql.md)
+- [ADR-002: ORMを使わず素のSQLを採用（廃止）](../adr/002-avoid-orm-use-raw-sql.md)
+- [ADR-003: Entity Framework Core を採用](../adr/003-use-ef-core.md)
 
 ### その他
 - [機能別設計書一覧](../features/README.md)
 - [GitHub Copilot Custom Instructions](../../copilot-instructions.md)
 - [DB接続管理](database-connection.md)
 
-### ADR
-- [ADR-001: SQLiteを教育用デモに採用](../adr/001-use-sqlite-for-education.md)
-- [ADR-002: ORMを使わず素のSQLを採用](../adr/002-avoid-orm-use-raw-sql.md)
-
-### その他
-- [機能別設計書一覧](../features/README.md)
-- [GitHub Copilot Custom Instructions](../../copilot-instructions.md)
