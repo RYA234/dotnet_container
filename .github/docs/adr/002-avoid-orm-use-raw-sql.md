@@ -1,7 +1,7 @@
 # ADR-002: ORMを使わず素のSQLを採用
 
 ## ステータス
-採用済み
+廃止（ADR-003: Entity Framework Core を採用 に置き換え）
 
 ## 日付
 2025-12-10
