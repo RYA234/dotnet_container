@@ -3,61 +3,261 @@
 }
 
 <div class="container mt-4">
-    <h1 class="mb-4">🚨 エラーハンドリングデモ</h1>
-    <p class="lead">例外処理のベストプラクティスを学ぶ</p>
+    <h1 class="mb-2">🚨 エラーハンドリングデモ</h1>
+    <p class="lead">カスタム例外クラスと ExceptionHandlingMiddleware の動作を体験できるデモ</p>
 
-    <div class="alert alert-warning">
-        <h4 class="alert-heading">🚧 このページは未実装です</h4>
-        <p class="mb-0">将来、以下の内容を実装予定：</p>
-        <ul class="mt-2">
-            <li>try-catch-finallyの正しい使い方</li>
-            <li>例外の種類と使い分け</li>
-            <li>カスタム例外の設計</li>
-            <li>ログ出力のベストプラクティス</li>
-            <li>リトライ戦略（Exponential Backoff）</li>
-            <li>Circuit Breakerパターン</li>
-        </ul>
-    </div>
-
-    <div class="row mt-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-danger text-white">
-                    <h3 class="h5 mb-0">❌ Bad: 例外握りつぶし</h3>
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h4 mb-0">📚 例外クラスの設計</h2>
+        </div>
+        <div class="card-body">
+            <p>このアプリでは <code>ApplicationException</code>（抽象基底クラス）を継承した4種類のカスタム例外を定義しています。</p>
+            <div class="row">
+                <div class="col-md-6">
+                    <pre class="bg-light p-3 rounded"><code>Exception（.NET標準）
+└── ApplicationException（抽象・独自定義）
+    ├── ValidationException    → 400
+    ├── NotFoundException      → 404
+    ├── BusinessRuleException  → 400
+    └── InfrastructureException→ 500</code></pre>
                 </div>
-                <div class="card-body">
-                    <pre class="bg-light p-3 rounded"><code>try {
-    // 危険な処理
-    await SomeRiskyOperation();
-}
-catch {
-    // 何もしない（例外を握りつぶす）
-}</code></pre>
-                    <p class="text-danger small mb-0">問題点: エラーが発生しても分からず、デバッグが困難</p>
+                <div class="col-md-6">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>例外クラス</th>
+                                <th>HTTP</th>
+                                <th>用途</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>ValidationException</code></td>
+                                <td><span class="badge bg-warning text-dark">400</span></td>
+                                <td>入力値エラー</td>
+                            </tr>
+                            <tr>
+                                <td><code>NotFoundException</code></td>
+                                <td><span class="badge bg-warning text-dark">404</span></td>
+                                <td>リソース未存在</td>
+                            </tr>
+                            <tr>
+                                <td><code>BusinessRuleException</code></td>
+                                <td><span class="badge bg-warning text-dark">400</span></td>
+                                <td>ビジネスルール違反</td>
+                            </tr>
+                            <tr>
+                                <td><code>InfrastructureException</code></td>
+                                <td><span class="badge bg-danger">500</span></td>
+                                <td>DB・外部API障害</td>
+                            </tr>
+                            <tr>
+                                <td><code>Exception（その他）</code></td>
+                                <td><span class="badge bg-danger">500</span></td>
+                                <td>予期しないエラー</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h3 class="h5 mb-0">✅ Good: 適切なエラーハンドリング</h3>
+    <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h2 class="h4 mb-0">🔥 例外を意図的に発火してみる</h2>
+        </div>
+        <div class="card-body">
+            <p>ボタンを押すと API エンドポイントを呼び出し、<strong>ExceptionHandlingMiddleware</strong> が例外をキャッチして JSON レスポンスに変換します。</p>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <div class="card border-warning">
+                        <div class="card-header bg-warning text-dark">ValidationException</div>
+                        <div class="card-body">
+                            <p class="small">入力値が不正な場合。複数フィールドのエラーをまとめて返す。</p>
+                            <button class="btn btn-warning btn-sm w-100" onclick="callApi('validation')">400 を発火</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <pre class="bg-light p-3 rounded"><code>try {
-    await SomeRiskyOperation();
-}
-catch (Exception ex) {
-    _logger.LogError(ex, "処理に失敗しました");
-    throw; // 再スロー
-}</code></pre>
-                    <p class="text-success small mb-0">ログに記録し、上位層で適切に処理</p>
+                <div class="col-md-4">
+                    <div class="card border-warning">
+                        <div class="card-header bg-warning text-dark">NotFoundException</div>
+                        <div class="card-body">
+                            <p class="small">指定IDのリソースが存在しない場合。resourceType・resourceId を返す。</p>
+                            <button class="btn btn-warning btn-sm w-100" onclick="callApi('not-found')">404 を発火</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-warning">
+                        <div class="card-header bg-warning text-dark">BusinessRuleException</div>
+                        <div class="card-body">
+                            <p class="small">技術的には正常でもビジネスルール違反の場合。ruleName を返す。</p>
+                            <button class="btn btn-warning btn-sm w-100" onclick="callApi('business-rule')">400 を発火</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-danger">
+                        <div class="card-header bg-danger text-white">InfrastructureException</div>
+                        <div class="card-body">
+                            <p class="small">DB・外部API障害など、システム起因のエラー。service名を返す。</p>
+                            <button class="btn btn-danger btn-sm w-100" onclick="callApi('infrastructure')">500 を発火</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-danger">
+                        <div class="card-header bg-danger text-white">予期しない例外</div>
+                        <div class="card-body">
+                            <p class="small">NullReferenceException 等のランタイムエラー。INTERNAL_ERROR を返す。</p>
+                            <button class="btn btn-danger btn-sm w-100" onclick="callApi('unexpected')">500 を発火</button>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            <h3 class="h5 mt-4">💻 レスポンス</h3>
+            <div id="result-area" style="display: none;">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="fw-bold">HTTP Status:</span>
+                    <span id="result-status" class="badge fs-6"></span>
+                </div>
+                <pre id="result-content" class="bg-light p-3 rounded"></pre>
+            </div>
+            <p id="result-placeholder" class="text-muted">← ボタンを押すとここにレスポンスが表示されます</p>
         </div>
     </div>
 
-    <div class="mt-4">
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h2 class="h4 mb-0">⚙️ ExceptionHandlingMiddleware の仕組み</h2>
+        </div>
+        <div class="card-body">
+            <p>例外ハンドリングを Controller ごとに書く代わりに、Middleware で一括管理しています。</p>
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="text-danger">❌ Bad: Controller 個別に try-catch</h5>
+                    <pre class="bg-light p-3 rounded"><code>// 全 Controller に同じコードが重複する
+public async Task&lt;IActionResult&gt; GetUser(int id)
+{
+    try {
+        var user = await _service.GetUser(id);
+        return Ok(user);
+    }
+    catch (NotFoundException ex) {
+        return NotFound(new { error = ex.Message });
+    }
+    catch (Exception ex) {
+        return StatusCode(500, ...);
+    }
+}</code></pre>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="text-success">✅ Good: Middleware で一括管理</h5>
+                    <pre class="bg-light p-3 rounded"><code>// Controller は業務ロジックに集中できる
+public async Task&lt;IActionResult&gt; GetUser(int id)
+{
+    var user = await _service.GetUser(id);
+    return Ok(user);
+    // 例外は Middleware がキャッチして
+    // JSON レスポンスに変換する
+}</code></pre>
+                </div>
+            </div>
+
+            <h5 class="mt-3">ログレベルの方針</h5>
+            <table class="table table-sm table-bordered">
+                <thead class="table-light">
+                    <tr><th>例外の種類</th><th>ログレベル</th><th>理由</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Validation / NotFound / BusinessRule</td>
+                        <td><span class="badge bg-warning text-dark">Warning</span></td>
+                        <td>ユーザー起因のため（システムは正常）</td>
+                    </tr>
+                    <tr>
+                        <td>Infrastructure / その他</td>
+                        <td><span class="badge bg-danger">Error</span></td>
+                        <td>システム障害のため（調査・対応が必要）</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h2 class="h4 mb-0">🔗 参考リンク</h2>
+        </div>
+        <div class="card-body">
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2">
+                    📄 <strong>設計書</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/blob/main/.github/docs/common/error-handling.md" target="_blank">
+                        error-handling.md
+                    </a>
+                </li>
+                <li class="mb-2">
+                    💻 <strong>ソースコード（例外クラス）</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/tree/main/src/BlazorApp/Shared/Exceptions" target="_blank">
+                        src/BlazorApp/Shared/Exceptions/
+                    </a>
+                </li>
+                <li class="mb-2">
+                    💻 <strong>ソースコード（Middleware）</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/blob/main/src/BlazorApp/Middleware/ExceptionHandlingMiddleware.cs" target="_blank">
+                        ExceptionHandlingMiddleware.cs
+                    </a>
+                </li>
+                <li class="mb-2">
+                    🧪 <strong>テストコード（例外クラス）</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/blob/main/BlazorApp.Tests/Shared/Exceptions/ExceptionClassTests.cs" target="_blank">
+                        ExceptionClassTests.cs
+                    </a>
+                </li>
+                <li>
+                    🧪 <strong>テストコード（Middleware）</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/blob/main/BlazorApp.Tests/Middleware/ExceptionHandlingMiddlewareTests.cs" target="_blank">
+                        ExceptionHandlingMiddlewareTests.cs
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="mt-3">
         <a href="~/Demo/Index" class="btn btn-secondary">← デモ一覧に戻る</a>
     </div>
 </div>
+
+<script>
+async function callApi(type) {
+    const resultArea = document.getElementById('result-area');
+    const resultStatus = document.getElementById('result-status');
+    const resultContent = document.getElementById('result-content');
+    const placeholder = document.getElementById('result-placeholder');
+
+    try {
+        const response = await fetch(`/dotnet/api/demo/error/${type}`);
+        const data = await response.json();
+
+        resultStatus.textContent = response.status;
+        resultStatus.className = response.status >= 500
+            ? 'badge bg-danger fs-6'
+            : response.status >= 400
+                ? 'badge bg-warning text-dark fs-6'
+                : 'badge bg-success fs-6';
+
+        resultContent.textContent = JSON.stringify(data, null, 2);
+        resultArea.style.display = 'block';
+        placeholder.style.display = 'none';
+    } catch (error) {
+        resultContent.textContent = 'fetch エラー: ' + error.message;
+        resultArea.style.display = 'block';
+        placeholder.style.display = 'none';
+    }
+}
+</script>
