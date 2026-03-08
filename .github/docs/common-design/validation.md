@@ -15,81 +15,102 @@
 
 ---
 
-## 2. フロントエンド vs バックエンド 判断基準
+## 2. エラーチェックの分類と実装場所
 
-| チェック内容 | フロント | バックエンド | 理由 |
-|------------|---------|------------|------|
-| 必須入力 | ○（即時フィードバック） | ○（必須） | UX改善 + セキュリティ |
-| 文字数制限 | ○（即時フィードバック） | ○（必須） | UX改善 + DB制約保護 |
-| 数値範囲 | ○（即時フィードバック） | ○（必須） | UX改善 + セキュリティ |
-| メール形式 | ○（即時フィードバック） | ○（必須） | UX改善 + セキュリティ |
-| 重複チェック（DB参照） | ✕ | ○（必須） | DB参照が必要なため |
-| 業務ルール（複数テーブル） | ✕ | ○（必須） | DB参照が必要なため |
-| 認証・認可チェック | ✕ | ○（必須） | フロントは改ざん可能なため |
+### 2.1 チェックの3分類
+
+| 分類 | 説明 | 実装層 |
+|------|------|--------|
+| **単項目チェック** | 1フィールド単独の検証（必須・文字数・形式） | プレゼンテーション層（Controller） |
+| **複数項目関連チェック** | 複数フィールドの組み合わせ検証 | ビジネス層（Service） |
+| **業務タイミングチェック** | DB参照・業務ルール・排他制御 | ビジネス層（Service） |
+
+### 2.2 フロントエンド vs バックエンド 判断基準
+
+| チェック内容 | 分類 | フロント | バックエンド | 理由 |
+|------------|------|---------|------------|------|
+| 必須入力 | 単項目 | ○（即時フィードバック） | ○（必須） | UX改善 + セキュリティ |
+| 文字数制限 | 単項目 | ○（即時フィードバック） | ○（必須） | UX改善 + DB制約保護 |
+| 数値範囲 | 単項目 | ○（即時フィードバック） | ○（必須） | UX改善 + セキュリティ |
+| メール形式 | 単項目 | ○（即時フィードバック） | ○（必須） | UX改善 + セキュリティ |
+| 重複チェック（DB参照） | 業務タイミング | ✕ | ○（必須） | DB参照が必要なため |
+| 業務ルール（複数テーブル） | 複数項目関連 | ✕ | ○（必須） | DB参照が必要なため |
+| 認証・認可チェック | 業務タイミング | ✕ | ○（必須） | フロントは改ざん可能なため |
 
 ---
 
 ## 3. バックエンドのバリデーション実装
 
-### 3.1 Data Annotations（ASP.NET Core標準）
+### 3.1 クラス構造
 
-RequestDTOに属性を付与してバリデーションを宣言的に定義する。
+RequestDTOにバリデーションルールを宣言的に定義し、Service層で業務ルールチェックを行う。
 
-```csharp
-public class CreateOrderRequest
-{
-    [Required(ErrorMessage = "顧客コードは必須です")]
-    [MaxLength(10, ErrorMessage = "顧客コードは10文字以内で入力してください")]
-    public string CustomerCode { get; set; } = string.Empty;
+```mermaid
+classDiagram
+    class RequestDTO {
+        +string CustomerCode
+        +DateTime OrderDate
+        +int Quantity
+        +decimal TotalAmount
+        <<バリデーションルール>>
+        CustomerCode: 必須, 最大10文字
+        OrderDate: 必須
+        Quantity: 1以上
+    }
 
-    [Required(ErrorMessage = "受注日は必須です")]
-    public DateTime OrderDate { get; set; }
+    class Controller {
+        +Create(RequestDTO request) Response
+        <<責務>>
+        入力値バリデーション(ModelState)
+        バリデーションエラー時 400返却
+    }
 
-    [Range(1, int.MaxValue, ErrorMessage = "数量は1以上で入力してください")]
-    public int Quantity { get; set; }
-}
+    class Service {
+        +CreateOrder(RequestDTO request) Response
+        <<責務>>
+        業務ルールバリデーション
+        DB参照チェック
+    }
+
+    Controller --> RequestDTO : 受け取る
+    Controller --> Service : 委譲
+    Service --> RequestDTO : 参照
 ```
 
-### 3.2 ModelStateによるチェック
+### 3.2 バリデーションフロー
 
-ControllerでModelState.IsValidをチェックする。
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Controller
+    participant Service
+    participant DB
 
-```csharp
-[HttpPost("api/orders")]
-public async Task<IActionResult> Create([FromBody] CreateOrderRequest request)
-{
-    if (!ModelState.IsValid)
-    {
-        return BadRequest(ModelState);
-    }
+    Client->>Controller: POST /api/orders (RequestDTO)
 
-    var result = await _orderService.CreateOrder(request);
-    return Ok(result);
-}
-```
+    Controller->>Controller: ModelState.IsValid チェック
+    alt 入力値エラー
+        Controller-->>Client: 400 BadRequest (ValidationError)
+    end
 
-### 3.3 業務ルールのバリデーション（Service層）
+    Controller->>Service: CreateOrder(request)
 
-DB参照が必要なチェックはService層で行い、例外をスローしてControllerに伝える。
+    Service->>DB: 顧客存在チェック
+    alt 顧客が存在しない
+        Service-->>Controller: ValidationException
+        Controller-->>Client: 400 BadRequest (ValidationError)
+    end
 
-```csharp
-public async Task<OrderResponse> CreateOrder(CreateOrderRequest request)
-{
-    // 顧客存在チェック
-    var customer = await GetCustomerAsync(request.CustomerCode);
-    if (customer == null)
-    {
-        throw new ValidationException($"顧客コード '{request.CustomerCode}' は存在しません");
-    }
+    Service->>DB: 与信チェック
+    alt 与信限度額超過
+        Service-->>Controller: ValidationException
+        Controller-->>Client: 400 BadRequest (ValidationError)
+    end
 
-    // 与信チェック
-    if (customer.CreditLimit < request.TotalAmount)
-    {
-        throw new ValidationException("与信限度額を超えています");
-    }
-
-    // ... 処理
-}
+    Service->>DB: 登録処理
+    DB-->>Service: 完了
+    Service-->>Controller: Response
+    Controller-->>Client: 200 OK
 ```
 
 ---
