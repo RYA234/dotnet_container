@@ -96,7 +96,7 @@ builder.Services.AddScoped<IFullTableScanRepository, FullTableScanRepository>();
 
 ## 参考
 
-- [クラス図](../internal-design/class-diagram.md)
-- [設定管理設計](../external-design/configuration.md)
+- [クラス図](../class-diagram.md)
+- [設定管理設計](../configuration.md)
 - [ADR-002: ORM を避け Raw SQL を使用する](002-avoid-orm-use-raw-sql.md)
 - [ADR-004: シークレットへのアクセスは IConfiguration 経由に限定する](004-secret-access-policy.md)

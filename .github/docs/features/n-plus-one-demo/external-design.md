@@ -290,4 +290,4 @@ erDiagram
 
 - [要件定義書](requirements.md)
 - [内部設計書](internal-design.md)
-- [全体API仕様書](../../external-design/api-specification.md)
+- [全体API仕様書](../../api-specification.md)

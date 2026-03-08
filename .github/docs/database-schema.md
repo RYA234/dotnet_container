@@ -244,6 +244,6 @@ dotnet run
 
 ## 参考
 
-- [論理DB設計](../external-design/database-logical.md)
+- [論理DB設計](database-logical.md)
 - [クラス設計](class-design.md)
 - [ADR-001: SQLiteを教育用デモに採用](../adr/001-use-sqlite-for-education.md)

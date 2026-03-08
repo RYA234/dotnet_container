@@ -6,8 +6,12 @@
 
 ### 1. 要件定義・設計書（システム全体）
 - [要件定義書](requirements.md) - システムの要件と目的
-- [外部設計書](external-design/) ✅ - 画面設計、API仕様、DB設計（論理）
-- [内部設計書](internal-design/) ✅ - クラス設計、DB設計（物理）、アルゴリズム
+- [アーキテクチャ](architecture.md) - 全体構成・技術スタック
+- [画面一覧](screen-list.md) / [画面詳細](screen-detail.md) - 画面設計
+- [API設計](api-design.md) / [API仕様書](api-specification.md) - API仕様
+- [バリデーション設計](validation.md) / [エラーハンドリング設計](error-handling.md)
+- [設定管理設計](configuration.md) / [DB接続設計](database-connection.md)
+- [セキュリティ設計](security.md) / [ログ設計](logging.md)
 - [運用設計手順書](operations.md) - デプロイ、監視、障害対応手順
 
 ### 2. 機能別設計書 ⭐ NEW
@@ -32,10 +36,10 @@
 ### 新規メンバー向け
 1. [要件定義書](requirements.md) - まずシステムの目的を理解
 2. [画面遷移図](screen-transition.md) - システム構成を把握
-3. [外部設計書](external-design/) - 画面とAPIの仕様を確認
+3. [API設計](api-design.md) - 画面とAPIの仕様を確認
 
 ### 開発者向け（全体把握）
-1. [内部設計書](internal-design/) - システム全体の実装詳細
+1. [アーキテクチャ](architecture.md) - システム全体の実装詳細
 2. [ADR一覧](adr/) - 技術選定の背景を理解
 
 ### 開発者向け（機能実装）

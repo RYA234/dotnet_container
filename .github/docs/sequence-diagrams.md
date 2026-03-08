@@ -173,4 +173,4 @@ sequenceDiagram
 
 - [クラス設計](class-design.md)
 - [エラー処理設計](error-handling.md)
-- [外部IF設計](../external-design/external-interface.md)
+- [外部IF設計](external-interface.md)
