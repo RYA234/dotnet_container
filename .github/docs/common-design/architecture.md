@@ -2,9 +2,16 @@
 
 ## 文書情報
 - **作成日**: 2025-12-12
-- **最終更新**: 2025-12-12
-- **バージョン**: 1.0
+- **最終更新**: 2026-01-06
+- **バージョン**: 1.1
 - **ステータス**: 実装済み
+
+## 変更履歴
+
+| 日付 | バージョン | 変更者 | 変更内容 |
+|------|----------|--------|----------|
+| 2025-12-12 | 1.0 | - | 初版作成 |
+| 2026-01-06 | 1.1 | - | レビュー指摘事項を反映（フォルダ構造修正、実装状況明記） |
 
 ---
 
@@ -16,30 +23,35 @@
 graph TB
     subgraph "クライアント層"
         Browser[ブラウザ]
-        MobileApp[モバイルアプリ]
     end
 
     subgraph "AWS Cloud"
         subgraph "ECS Cluster"
-            WebApp[ASP.NET Core MVC<br/>Docker Container]
-        end
-
-        subgraph "データベース層"
-            RDS[(PostgreSQL<br/>RDS)]
-            SQLite[(SQLite<br/>ローカルデモ用)]
-        end
-
-        subgraph "外部サービス"
-            Supabase[Supabase<br/>Auth & Storage]
+            subgraph "Docker Container"
+                WebApp[ASP.NET Core MVC]
+                SQLite[(SQLite<br/>ローカルデモ用)]
+            end
         end
     end
 
+    subgraph "外部サービス"
+        Supabase[Supabase<br/>Auth & Storage]
+    end
+
     Browser --> WebApp
-    MobileApp --> WebApp
-    WebApp --> RDS
     WebApp --> SQLite
     WebApp --> Supabase
 ```
+
+**Supabase の使用用途:**
+- **認証（Auth）**: ユーザー認証・認可（計画中）
+- **ストレージ**: ファイルアップロード（計画中）
+- **リアルタイムDB**: 将来的に検討
+
+**実装状況:**
+- [x] SupabaseService: 実装済み（`Features/Supabase/`）
+- [ ] 認証統合: 未実装
+- [ ] ストレージ統合: 未実装
 
 ---
 
@@ -60,7 +72,6 @@ graph LR
     subgraph "本番環境 (AWS)"
         ALB[Application Load Balancer]
         ECS[ECS Fargate<br/>ASP.NET Core Container]
-        RDS_Prod[(RDS PostgreSQL<br/>Multi-AZ)]
         SecretsManager[AWS Secrets Manager<br/>接続文字列・API Key]
     end
 
@@ -68,13 +79,12 @@ graph LR
     GitHub -->|docker build| ECR
     ECR -->|deploy| ECS
     ALB --> ECS
-    ECS --> RDS_Prod
     ECS --> SecretsManager
 ```
 
 **デプロイフロー**:
-1. 開発者が `git push` でコードをプッシュ
-2. GitHub Actions が自動ビルド・テスト実行
+1. 開発者が PR を作成し、main ブランチにマージ
+2. GitHub Actions が自動ビルド・テスト実行（CD開始）
 3. テスト成功後、Docker イメージを ECR にプッシュ
 4. ECS が新しいイメージをデプロイ
 5. ALB がトラフィックを新しいコンテナに切り替え
@@ -100,8 +110,8 @@ graph TD
     end
 
     subgraph "データアクセス層"
-        ADO[ADO.NET<br/>Raw SQL実行]
-        Connection[SqliteConnection<br/>NpgsqlConnection]
+        EFCore[Entity Framework Core<br/>ORM]
+        Connection[DbContext<br/>PostgreSQL / SQLite]
     end
 
     subgraph "データベース"
@@ -117,8 +127,8 @@ graph TD
     Controller --> Service
     Controller --> View
     Service --> Interface
-    Service --> ADO
-    ADO --> Connection
+    Service --> EFCore
+    EFCore --> Connection
     Connection --> DB
     Service --> Config
     Service --> Logger
@@ -129,23 +139,39 @@ graph TD
 
 ### 2.2 フォルダ構造
 
+> **注意:** プロジェクト名は `BlazorApp` ですが、実際は ASP.NET Core MVC アプリケーションです（歴史的経緯による名称）。
+
 ```
-BlazorApp/
-├── Features/               # 機能ごとに分類
+src/BlazorApp/
+├── Features/               # 機能ごとに分類（Feature-based Architecture）
 │   ├── Demo/              # デモ機能（エンジニア教育用）
-│   │   ├── Controllers/   # DemoController.cs
-│   │   ├── Services/      # NPlusOneService.cs, etc.
-│   │   ├── Models/        # DTO, Request, Response
-│   │   └── Views/         # Razor Views
+│   │   ├── DemoController.cs    # Controller（Controllersフォルダは使用しない）
+│   │   ├── Services/            # NPlusOneService.cs, SelectStarService.cs, etc.
+│   │   ├── Models/              # DTO, Request, Response
+│   │   └── Views/               # Razor Views
 │   │
 │   ├── Home/              # ホーム機能
-│   │   ├── Controllers/   # HomeController.cs
-│   │   └── Views/         # Index.cshtml
+│   │   ├── HomeController.cs    # Controller
+│   │   └── Views/               # Index.cshtml
 │   │
-│   └── ReleaseNotes/      # リリースノート機能
-│       ├── Controllers/   # ReleaseNotesController.cs
-│       ├── Services/      # ReleaseNotesService.cs
-│       └── Views/         # Index.cshtml
+│   ├── ReleaseNotes/      # リリースノート機能
+│   │   ├── ReleaseNotesController.cs  # Controller
+│   │   ├── Services/            # ReleaseNotesService.cs
+│   │   └── Views/               # Index.cshtml
+│   │
+│   ├── Calculator/        # 計算機能
+│   │   ├── CalculatorController.cs
+│   │   ├── CalculatorService.cs
+│   │   └── Views/
+│   │
+│   ├── Orders/            # 注文機能
+│   │   ├── OrdersController.cs
+│   │   ├── OrderService.cs
+│   │   └── Views/
+│   │
+│   └── Supabase/          # Supabase連携
+│       ├── SupabaseService.cs
+│       └── ISupabaseService.cs
 │
 ├── Shared/                # 共通コンポーネント
 │   ├── Middleware/        # 例外処理、認証
@@ -206,14 +232,29 @@ graph LR
 |---------|------|----------|------|
 | Framework | ASP.NET Core MVC | 8.0 | Webアプリケーション |
 | Language | C# | 12.0 | プログラミング言語 |
-| Database Access | ADO.NET (Raw SQL) | - | データベースアクセス |
+| Database Access | Entity Framework Core | 8.0 | データベースアクセス（ORM） |
 | Database (本番) | PostgreSQL | 16.x | RDS on AWS |
 | Database (デモ) | SQLite | 3.x | ローカルデモ用 |
 | DI Container | Microsoft.Extensions.DependencyInjection | 8.0 | 依存性注入 |
 | Logging | ILogger (Serilog) | - | ログ出力 |
 | Configuration | appsettings.json + 環境変数 | - | 設定管理 |
 
-**ADO.NET採用理由**: [ADR-002: ORMを使わず素のSQLを採用](../adr/002-avoid-orm-use-raw-sql.md)
+**EF Core採用理由**: [ADR-003: Entity Framework Core を採用](../adr/003-use-ef-core.md)
+
+---
+
+### データベース選定
+
+| 環境 | DB | 用途 | ADR | 実装状況 |
+|------|-----|------|-----|----------|
+| 本番 | PostgreSQL (RDS) | 基幹システム | - | 🚧 計画中 |
+| デモ | SQLite | 教育用デモ（N+1問題等） | [ADR-001](../adr/001-use-sqlite-for-education.md) | ✅ 実装済み |
+
+**切り替え方法:**
+- `appsettings.json` の `ConnectionStrings` で管理
+- 環境変数 `ASPNETCORE_ENVIRONMENT` で自動切り替え
+- デモ機能は常にSQLiteを使用（`demo.db`）
+- 基幹システム機能はPostgreSQLを使用予定
 
 ---
 
@@ -244,12 +285,13 @@ graph LR
 
 | ツール | 用途 |
 |-------|------|
-| Visual Studio 2022 | IDE (Windows) |
-| Visual Studio Code | IDE (Mac/Linux) |
+| Visual Studio Code | IDE |
 | Docker Desktop | ローカル開発環境 |
 | xUnit | 単体テスト |
 | Playwright | E2Eテスト |
+| DocFx | APIドキュメント自動生成 |
 | GitHub Copilot | AI開発支援 |
+| Claude Code | AI開発支援（CLI） |
 
 ---
 
@@ -298,31 +340,13 @@ graph LR
 
 ## 5. デプロイ戦略
 
-### 5.1 Blue-Green デプロイ
+### 5.1 デプロイ方式
 
-```mermaid
-sequenceDiagram
-    participant Developer
-    participant GitHub
-    participant ECR
-    participant ECS_Blue as ECS (Blue)
-    participant ECS_Green as ECS (Green)
-    participant ALB
-
-    Developer->>GitHub: git push
-    GitHub->>ECR: docker push (new image)
-    ECR->>ECS_Green: deploy new version
-    ECS_Green->>ECS_Green: health check OK
-    ALB->>ECS_Blue: 100% traffic
-    ALB->>ECS_Green: switch to 100% traffic
-    ECS_Blue->>ECS_Blue: drain connections
-    Note over ECS_Blue: 旧バージョン停止
-```
-
-**メリット**:
-- ダウンタイムなしでデプロイ
-- 問題発生時に即座にロールバック可能
-
+- **方式**: シングルタスク・デプロイ
+- **ECS タスク数**: 1
+- **手順**: GitHub Actions が ECR にイメージをプッシュ → ECS タスクを自動更新
+- **ダウンタイム**: あり（旧タスク停止 → 新タスク起動の間）
+- **理由**: シンプルな構成を優先
 ---
 
 ### 5.2 環境分離
@@ -330,7 +354,6 @@ sequenceDiagram
 | 環境 | 用途 | デプロイ頻度 |
 |------|------|------------|
 | Development | ローカル開発 | 常時 |
-| Staging | 本番前検証 | 週1回 |
 | Production | 本番環境 | 月2回 |
 
 ---
@@ -350,6 +373,28 @@ sequenceDiagram
 
 ### 6.2 メトリクス監視
 
+**実装状況:**
+- [x] CloudWatch Logs: 実装済み（ECSタスクログ自動収集）
+- [ ] CloudWatch Metrics（カスタム）: 未実装
+- [ ] CloudWatch Alarms: 未実装
+- [ ] SNS通知: 未実装
+
+**Phase 1（実装済み）:**
+
+```mermaid
+graph LR
+    App[ASP.NET Core App]
+    CloudWatch[CloudWatch Logs]
+
+    App -->|ログ出力| CloudWatch
+```
+
+- ECS タスクログ → CloudWatch Logs Group
+- ログレベル: Error, Warning, Information, Debug
+- ログの保持期間: 7日間
+
+**Phase 2（計画中）:**
+
 ```mermaid
 graph LR
     App[ASP.NET Core App]
@@ -364,17 +409,33 @@ graph LR
     Alarm -->|通知| SNS
 ```
 
-**監視項目**:
+**監視項目（計画）:**
 - CPU使用率 (> 80%)
 - メモリ使用率 (> 80%)
 - エラーレート (> 1%)
 - レスポンスタイム (> 500ms)
+- SQLクエリ実行時間 (> 100ms)
+- API呼び出し回数
 
 ---
 
 ## 7. 参考
 
+### 設計書
 - [クラス図](class-diagram.md)
 - [シーケンス図](sequence-diagram.md)
-- [ADR-001: Feature-based アーキテクチャ採用](../adr/001-feature-based-architecture.md)
-- [ADR-002: ORMを使わず素のSQLを採用](../adr/002-avoid-orm-use-raw-sql.md)
+- [エラーハンドリング設計](error-handling.md)
+- [セキュリティ設計](security.md)
+- [ログ設計](logging.md)
+- [DB接続管理](database-connection.md)
+
+### ADR
+- [ADR-001: SQLiteを教育用デモに採用](../adr/001-use-sqlite-for-education.md)
+- [ADR-002: ORMを使わず素のSQLを採用（廃止）](../adr/002-avoid-orm-use-raw-sql.md)
+- [ADR-003: Entity Framework Core を採用](../adr/003-use-ef-core.md)
+
+### その他
+- [機能別設計書一覧](../features/README.md)
+- [GitHub Copilot Custom Instructions](../../copilot-instructions.md)
+- [DB接続管理](database-connection.md)
+

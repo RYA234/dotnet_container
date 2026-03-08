@@ -1,66 +1,186 @@
 # エラーハンドリング設計
 
 ## 文書情報
+- **文書種別**: 外部設計書
 - **作成日**: 2025-12-12
 - **最終更新**: 2025-12-12
 - **バージョン**: 1.0
 - **ステータス**: 実装中
 
----
+## 文書の目的
 
-## 1. 基本方針
+本文書は**外部設計書**として、エラーハンドリングの構造・動作を言語非依存で定義する。
 
-### 1.1 エラーハンドリングの原則
+実装言語・フレームワークが決定した後、本設計書を元に実装設計書（内部設計書）およびコードを作成する。
 
-1. **レイヤーごとに責務を分離**
-   - Controller: HTTP ステータスコード設定、エラーレスポンス生成
-   - Service: ビジネスロジックの例外スロー
-   - Infrastructure: データベース例外、外部API例外
-
-2. **例外を適切にキャッチ**
-   - 回復可能なエラー: リトライ、フォールバック
-   - 回復不可能なエラー: ログ出力、ユーザーへの通知
-
-3. **ユーザーフレンドリーなエラーメッセージ**
-   - 内部エラー詳細を隠蔽
-   - ユーザーが対処できる情報を提供
-
-4. **ログとモニタリング**
-   - すべてのエラーをログ出力
-   - 重大なエラーはアラート通知
+| 設計フェーズ | 文書 | 内容 |
+|---|---|---|
+| 外部設計（本文書） | error-handling.md | クラス構造・処理フロー・設計意図 |
+| 内部設計 | 実装時に作成 | 言語固有の実装詳細・使用例 |
 
 ---
 
-## 2. 例外の分類
+## 1. エラーハンドリングの基本方針
 
-### 2.1 例外クラス階層
+### 1.1 目的
+
+1. **安定性**: 例外発生時もアプリケーションを停止させない
+2. **可読性**: エラーメッセージをユーザーにわかりやすく提示
+3. **保守性**: エラーの原因を素早く特定できる
+4. **セキュリティ**: 内部情報を外部に漏らさない
+
+---
+
+### 1.2 エラーハンドリングの原則
+
+| 原則 | 説明 |
+|------|------|
+| **レイヤー分離** | Controller → Service → Infrastructure で責務を明確化 |
+| **早期リターン** | エラーは早く検知して早く返す |
+| **適切なログ出力** | すべてのエラーを Information/Warning/Error で記録 |
+| **ユーザーフレンドリー** | 技術的詳細を隠し、対処方法を提示 |
+
+---
+
+## 2. エラーレスポンス形式
+
+### 2.1 開発環境（詳細情報あり）
+
+```json
+{
+  "error": "User not found",
+  "code": "NOT_FOUND",
+  "details": {
+    "resourceType": "User",
+    "resourceId": "123"
+  },
+  "timestamp": "2025-12-12T10:00:00.123Z",
+  "stackTrace": "at UserService.GetUserById..."
+}
+```
+
+---
+
+### 2.2 本番環境（簡潔）
+
+```json
+{
+  "error": "User not found",
+  "code": "NOT_FOUND",
+  "timestamp": "2025-12-12T10:00:00.123Z"
+}
+```
+
+**形式**: JSON形式、スタックトレースは本番環境では非表示
+
+---
+
+## 3. 例外の種類
+
+### 3.1 3つのカテゴリ
+
+例外を以下の3つに分類して管理します。
+
+#### 1️⃣ **業務上の例外**（Business Exceptions）
+- **説明**: ビジネスルールやバリデーションのエラー
+- **HTTPステータス**: 400 Bad Request / 404 Not Found
+- **対応**: ユーザーに修正方法を提示
+- **例**: 在庫不足、必須項目未入力、ユーザーID不一致
+
+#### 2️⃣ **システム上の例外**（Infrastructure Exceptions）
+- **説明**: 外部システムやインフラのエラー
+- **HTTPステータス**: 500 Internal Server Error / 503 Service Unavailable
+- **対応**: リトライ、アラート通知
+- **例**: DB接続失敗、外部API タイムアウト
+
+#### 3️⃣ **プログラミング言語の例外**（Runtime Exceptions）
+- **説明**: ランタイムの予期しないエラー
+- **HTTPステータス**: 500 Internal Server Error
+- **対応**: ログ出力、バグ修正
+- **例**: NullReferenceException, ArgumentNullException, IndexOutOfRangeException
+
+---
+
+### 3.2 カスタム例外の分類
+
+| 例外クラス | カテゴリ | HTTPステータス | 用途 | 例 |
+|-----------|---------|--------------|------|-----|
+| **ValidationException** | 業務 | 400 Bad Request | 入力検証エラー | 必須項目未入力 |
+| **NotFoundException** | 業務 | 404 Not Found | リソース未存在 | ユーザーID不一致 |
+| **BusinessRuleException** | 業務 | 400 Bad Request | ビジネスルール違反 | 在庫不足 |
+| **InfrastructureException** | システム | 500 Internal Server Error | 外部システムエラー | DB接続失敗 |
+
+**補足**:
+- ランタイム例外（NullReferenceException等）はキャッチして InfrastructureException に変換
+- すべての例外は最終的に ErrorResponse として返却
+
+---
+
+## 4. エラーハンドリングのタイミング
+
+### 4.1 エラーハンドリングフロー
+
+```mermaid
+flowchart TD
+    Start([リクエスト受信]) --> Validate{入力検証}
+
+    Validate -->|NG| Return400[400 Bad Request<br/>ValidationException]
+    Return400 --> Log1[Warning: ログ出力]
+    Log1 --> End1([レスポンス返却])
+
+    Validate -->|OK| Service[Service層処理]
+    Service --> Check{エラー発生?}
+
+    Check -->|NotFoundException| Return404[404 Not Found]
+    Return404 --> Log2[Warning: ログ出力]
+    Log2 --> End2([レスポンス返却])
+
+    Check -->|BusinessRuleException| Return400_2[400 Bad Request]
+    Return400_2 --> Log3[Warning: ログ出力]
+    Log3 --> End3([レスポンス返却])
+
+    Check -->|InfrastructureException| Return500[500 Internal Server Error]
+    Return500 --> Log4[Error: ログ出力]
+    Log4 --> End4([レスポンス返却])
+
+    Check -->|OK| Return200[200 OK]
+    Return200 --> End5([レスポンス返却])
+
+    style Return400 fill:#fff3cd
+    style Return404 fill:#fff3cd
+    style Return400_2 fill:#fff3cd
+    style Return500 fill:#f8d7da
+    style Return200 fill:#d4edda
+```
+
+---
+
+## 5. 例外クラス定義
+
+### 5.1 クラス図
 
 ```mermaid
 classDiagram
+    direction TB
     class Exception {
-        <<System>>
+        <<system>>
     }
-
     class ApplicationException {
-        <<Custom>>
+        <<abstract>>
         +string ErrorCode
         +int StatusCode
-        +Dictionary~string,object~ Details
+        +Dictionary~string, object~ Details
     }
-
     class ValidationException {
         +List~ValidationError~ Errors
     }
-
     class NotFoundException {
         +string ResourceType
         +string ResourceId
     }
-
     class BusinessRuleException {
         +string RuleName
     }
-
     class InfrastructureException {
         +string Service
     }
@@ -72,601 +192,89 @@ classDiagram
     ApplicationException <|-- InfrastructureException
 ```
 
+### 5.2 各クラスの固有プロパティの意図
+
+| クラス | 固有プロパティ | 用途 |
+|---|---|---|
+| ApplicationException | ErrorCode / StatusCode / Details | 全例外共通。エラー種別・HTTPステータス・追加情報を保持 |
+| ValidationException | Errors（リスト） | 複数フィールドのエラーを同時に返すためリスト型 |
+| NotFoundException | ResourceType / ResourceId | 何のリソースがどのIDで見つからなかったかを特定 |
+| BusinessRuleException | RuleName | どのビジネスルールに違反したかを特定（例: CreditLimitExceeded） |
+| InfrastructureException | Service | どの外部サービスが障害かを特定（例: Database・ExternalAPI） |
+
 ---
 
-### 2.2 カスタム例外定義
+### 5.3 ValidationException（入力検証エラー）
 
-```csharp
-/// <summary>
-/// アプリケーション例外の基底クラス
-/// </summary>
-public abstract class ApplicationException : Exception
-{
-    /// <summary>
-    /// エラーコード（例: "USER_NOT_FOUND"）
-    /// </summary>
-    public string ErrorCode { get; }
+ユーザーの入力値が不正な場合に発生する。複数フィールドのエラーをまとめて返す。
 
-    /// <summary>
-    /// HTTPステータスコード
-    /// </summary>
-    public int StatusCode { get; }
+```mermaid
+sequenceDiagram
+    actor User
+    participant API
+    participant Validator
 
-    /// <summary>
-    /// エラー詳細情報
-    /// </summary>
-    public Dictionary<string, object> Details { get; }
-
-    protected ApplicationException(
-        string message,
-        string errorCode,
-        int statusCode,
-        Dictionary<string, object>? details = null)
-        : base(message)
-    {
-        ErrorCode = errorCode;
-        StatusCode = statusCode;
-        Details = details ?? new Dictionary<string, object>();
-    }
-}
-
-/// <summary>
-/// バリデーションエラー
-/// </summary>
-public class ValidationException : ApplicationException
-{
-    public List<ValidationError> Errors { get; }
-
-    public ValidationException(List<ValidationError> errors)
-        : base("Validation failed", "VALIDATION_ERROR", 400)
-    {
-        Errors = errors;
-        Details["errors"] = errors;
-    }
-}
-
-/// <summary>
-/// リソースが見つからない
-/// </summary>
-public class NotFoundException : ApplicationException
-{
-    public string ResourceType { get; }
-    public string ResourceId { get; }
-
-    public NotFoundException(string resourceType, string resourceId)
-        : base($"{resourceType} with id '{resourceId}' not found", "NOT_FOUND", 404)
-    {
-        ResourceType = resourceType;
-        ResourceId = resourceId;
-        Details["resourceType"] = resourceType;
-        Details["resourceId"] = resourceId;
-    }
-}
-
-/// <summary>
-/// ビジネスルール違反
-/// </summary>
-public class BusinessRuleException : ApplicationException
-{
-    public string RuleName { get; }
-
-    public BusinessRuleException(string ruleName, string message)
-        : base(message, "BUSINESS_RULE_VIOLATION", 400)
-    {
-        RuleName = ruleName;
-        Details["ruleName"] = ruleName;
-    }
-}
-
-/// <summary>
-/// インフラストラクチャ例外（DB、外部API等）
-/// </summary>
-public class InfrastructureException : ApplicationException
-{
-    public string Service { get; }
-
-    public InfrastructureException(string service, string message, Exception innerException)
-        : base(message, "INFRASTRUCTURE_ERROR", 500)
-    {
-        Service = service;
-        Details["service"] = service;
-    }
-}
+    User->>API: リクエスト送信 (Email空・パスワード短い)
+    API->>Validator: 入力値を検証
+    Validator-->>API: ValidationException(Errors: [Email必須, PW8文字以上])
+    API-->>User: 400 Bad Request
+    Note over API,User: ErrorCode: VALIDATION_ERROR<br/>Errors: 違反フィールドのリスト
 ```
 
 ---
 
-## 3. レイヤー別エラーハンドリング
+### 5.4 NotFoundException（リソース未存在）
 
-### 3.1 Controller レイヤー
+指定されたIDのリソースがDBに存在しない場合に発生する。
 
-```csharp
-[ApiController]
-[Route("api/[controller]")]
-public class UserController : ControllerBase
-{
-    private readonly IUserService _userService;
-    private readonly ILogger<UserController> _logger;
+```mermaid
+sequenceDiagram
+    actor User
+    participant API
+    participant DB
 
-    public UserController(IUserService userService, ILogger<UserController> logger)
-    {
-        _userService = userService;
-        _logger = logger;
-    }
-
-    /// <summary>
-    /// ユーザー取得
-    /// </summary>
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetUser(int id)
-    {
-        try
-        {
-            var user = await _userService.GetUserById(id);
-            return Ok(user);
-        }
-        catch (NotFoundException ex)
-        {
-            _logger.LogWarning(ex, "User not found: {UserId}", id);
-            return NotFound(new ErrorResponse
-            {
-                Error = ex.Message,
-                Code = ex.ErrorCode,
-                Details = ex.Details,
-                Timestamp = DateTime.UtcNow
-            });
-        }
-        catch (ApplicationException ex)
-        {
-            _logger.LogError(ex, "Application error in GetUser: {UserId}", id);
-            return StatusCode(ex.StatusCode, new ErrorResponse
-            {
-                Error = ex.Message,
-                Code = ex.ErrorCode,
-                Details = ex.Details,
-                Timestamp = DateTime.UtcNow
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error in GetUser: {UserId}", id);
-            return StatusCode(500, new ErrorResponse
-            {
-                Error = "Internal server error",
-                Code = "INTERNAL_ERROR",
-                Timestamp = DateTime.UtcNow
-            });
-        }
-    }
-
-    /// <summary>
-    /// ユーザー作成
-    /// </summary>
-    [HttpPost]
-    public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
-    {
-        try
-        {
-            // ModelState検証
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(new ErrorResponse
-                {
-                    Error = "Validation failed",
-                    Code = "VALIDATION_ERROR",
-                    Details = new Dictionary<string, object>
-                    {
-                        ["errors"] = ModelState.Values
-                            .SelectMany(v => v.Errors)
-                            .Select(e => e.ErrorMessage)
-                            .ToList()
-                    },
-                    Timestamp = DateTime.UtcNow
-                });
-            }
-
-            var user = await _userService.CreateUser(request);
-            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
-        }
-        catch (ValidationException ex)
-        {
-            _logger.LogWarning(ex, "Validation failed for CreateUser");
-            return BadRequest(new ErrorResponse
-            {
-                Error = ex.Message,
-                Code = ex.ErrorCode,
-                Details = ex.Details,
-                Timestamp = DateTime.UtcNow
-            });
-        }
-        catch (BusinessRuleException ex)
-        {
-            _logger.LogWarning(ex, "Business rule violation: {RuleName}", ex.RuleName);
-            return BadRequest(new ErrorResponse
-            {
-                Error = ex.Message,
-                Code = ex.ErrorCode,
-                Details = ex.Details,
-                Timestamp = DateTime.UtcNow
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error in CreateUser");
-            return StatusCode(500, new ErrorResponse
-            {
-                Error = "Internal server error",
-                Code = "INTERNAL_ERROR",
-                Timestamp = DateTime.UtcNow
-            });
-        }
-    }
-}
+    User->>API: GET /users/999
+    API->>DB: ID=999 のユーザーを検索
+    DB-->>API: 結果なし
+    API-->>User: 404 Not Found
+    Note over API,User: ErrorCode: NOT_FOUND<br/>ResourceType: User<br/>ResourceId: 999
 ```
 
 ---
 
-### 3.2 Service レイヤー
+### 5.5 BusinessRuleException（ビジネスルール違反）
 
-```csharp
-public class UserService : IUserService
-{
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<UserService> _logger;
+技術的には正常だがビジネスルール上許可できない操作の場合に発生する。
 
-    public UserService(IConfiguration configuration, ILogger<UserService> logger)
-    {
-        _configuration = configuration;
-        _logger = logger;
-    }
+```mermaid
+sequenceDiagram
+    actor User
+    participant API
+    participant RuleChecker
 
-    public async Task<User> GetUserById(int id)
-    {
-        using var connection = GetConnection();
-        await connection.OpenAsync();
-
-        var sql = "SELECT Id, Name, Email FROM Users WHERE Id = @Id";
-        using var command = new SqliteCommand(sql, connection);
-        command.Parameters.AddWithValue("@Id", id);
-
-        using var reader = await command.ExecuteReaderAsync();
-        if (!await reader.ReadAsync())
-        {
-            // NotFoundException をスロー
-            throw new NotFoundException("User", id.ToString());
-        }
-
-        return new User
-        {
-            Id = reader.GetInt32(0),
-            Name = reader.GetString(1),
-            Email = reader.GetString(2)
-        };
-    }
-
-    public async Task<User> CreateUser(CreateUserRequest request)
-    {
-        // ビジネスルール検証
-        if (await IsEmailExists(request.Email))
-        {
-            throw new BusinessRuleException(
-                "UNIQUE_EMAIL",
-                $"Email '{request.Email}' is already registered");
-        }
-
-        using var connection = GetConnection();
-        await connection.OpenAsync();
-
-        var sql = @"
-            INSERT INTO Users (Name, Email, CreatedAt)
-            VALUES (@Name, @Email, @CreatedAt)
-            RETURNING Id";
-
-        using var command = new SqliteCommand(sql, connection);
-        command.Parameters.AddWithValue("@Name", request.Name);
-        command.Parameters.AddWithValue("@Email", request.Email);
-        command.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
-
-        var id = (long)await command.ExecuteScalarAsync();
-
-        _logger.LogInformation("User created: {UserId}, {Email}", id, request.Email);
-
-        return await GetUserById((int)id);
-    }
-
-    private async Task<bool> IsEmailExists(string email)
-    {
-        using var connection = GetConnection();
-        await connection.OpenAsync();
-
-        var sql = "SELECT COUNT(*) FROM Users WHERE Email = @Email";
-        using var command = new SqliteCommand(sql, connection);
-        command.Parameters.AddWithValue("@Email", email);
-
-        var count = (long)await command.ExecuteScalarAsync();
-        return count > 0;
-    }
-
-    private SqliteConnection GetConnection()
-    {
-        var connectionString = _configuration.GetConnectionString("DefaultConnection");
-        if (string.IsNullOrEmpty(connectionString))
-        {
-            throw new InvalidOperationException("Connection string 'DefaultConnection' not found");
-        }
-        return new SqliteConnection(connectionString);
-    }
-}
+    User->>API: 注文リクエスト (金額: 100万円)
+    API->>RuleChecker: ビジネスルール検証
+    RuleChecker-->>API: BusinessRuleException(RuleName: CreditLimitExceeded)
+    API-->>User: 400 Bad Request
+    Note over API,User: ErrorCode: BUSINESS_RULE_VIOLATION<br/>RuleName: 違反したルール名
 ```
 
 ---
 
-### 3.3 グローバル例外ハンドラー（Middleware）
+### 5.6 InfrastructureException（外部システムエラー）
 
-```csharp
-/// <summary>
-/// グローバル例外ハンドリングミドルウェア
-/// </summary>
-public class GlobalExceptionHandlerMiddleware
-{
-    private readonly RequestDelegate _next;
-    private readonly ILogger<GlobalExceptionHandlerMiddleware> _logger;
+DB・外部APIなど外部システムの障害時に発生する。
 
-    public GlobalExceptionHandlerMiddleware(
-        RequestDelegate next,
-        ILogger<GlobalExceptionHandlerMiddleware> logger)
-    {
-        _next = next;
-        _logger = logger;
-    }
+```mermaid
+sequenceDiagram
+    participant API
+    participant DB
 
-    public async Task InvokeAsync(HttpContext context)
-    {
-        try
-        {
-            await _next(context);
-        }
-        catch (ApplicationException ex)
-        {
-            _logger.LogError(ex, "Application exception: {ErrorCode}", ex.ErrorCode);
-            await HandleApplicationException(context, ex);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unhandled exception");
-            await HandleUnexpectedException(context, ex);
-        }
-    }
-
-    private static async Task HandleApplicationException(HttpContext context, ApplicationException ex)
-    {
-        context.Response.ContentType = "application/json";
-        context.Response.StatusCode = ex.StatusCode;
-
-        var response = new ErrorResponse
-        {
-            Error = ex.Message,
-            Code = ex.ErrorCode,
-            Details = ex.Details,
-            Timestamp = DateTime.UtcNow
-        };
-
-        await context.Response.WriteAsJsonAsync(response);
-    }
-
-    private static async Task HandleUnexpectedException(HttpContext context, Exception ex)
-    {
-        context.Response.ContentType = "application/json";
-        context.Response.StatusCode = 500;
-
-        var response = new ErrorResponse
-        {
-            Error = "Internal server error",
-            Code = "INTERNAL_ERROR",
-            Timestamp = DateTime.UtcNow
-        };
-
-        await context.Response.WriteAsJsonAsync(response);
-    }
-}
-
-// Program.cs での登録
-app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
-```
-
----
-
-## 4. エラーレスポンス形式
-
-### 4.1 標準エラーレスポンス
-
-```csharp
-/// <summary>
-/// エラーレスポンス
-/// </summary>
-public class ErrorResponse
-{
-    /// <summary>
-    /// エラーメッセージ
-    /// </summary>
-    public string Error { get; set; } = string.Empty;
-
-    /// <summary>
-    /// エラーコード（例: "USER_NOT_FOUND", "VALIDATION_ERROR"）
-    /// </summary>
-    public string Code { get; set; } = string.Empty;
-
-    /// <summary>
-    /// エラー詳細情報
-    /// </summary>
-    public Dictionary<string, object>? Details { get; set; }
-
-    /// <summary>
-    /// タイムスタンプ（UTC）
-    /// </summary>
-    public DateTime Timestamp { get; set; }
-
-    /// <summary>
-    /// トレースID（デバッグ用）
-    /// </summary>
-    public string? TraceId { get; set; }
-}
-```
-
-**レスポンス例**:
-```json
-{
-  "error": "User with id '123' not found",
-  "code": "NOT_FOUND",
-  "details": {
-    "resourceType": "User",
-    "resourceId": "123"
-  },
-  "timestamp": "2025-12-12T10:00:00Z",
-  "traceId": "0HMN8J9K7L6M5N4O3P2Q1R0S"
-}
-```
-
----
-
-### 4.2 バリデーションエラーレスポンス
-
-```json
-{
-  "error": "Validation failed",
-  "code": "VALIDATION_ERROR",
-  "details": {
-    "errors": [
-      {
-        "field": "Email",
-        "message": "The Email field is not a valid e-mail address."
-      },
-      {
-        "field": "Name",
-        "message": "The Name field is required."
-      }
-    ]
-  },
-  "timestamp": "2025-12-12T10:00:00Z"
-}
-```
-
----
-
-## 5. リトライ戦略
-
-### 5.1 Polly を使用したリトライ
-
-```csharp
-using Polly;
-using Polly.Retry;
-
-public class ExternalApiService
-{
-    private readonly HttpClient _httpClient;
-    private readonly ILogger<ExternalApiService> _logger;
-    private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
-
-    public ExternalApiService(HttpClient httpClient, ILogger<ExternalApiService> logger)
-    {
-        _httpClient = httpClient;
-        _logger = logger;
-
-        // リトライポリシー設定
-        _retryPolicy = Policy
-            .HandleResult<HttpResponseMessage>(r => !r.IsSuccessStatusCode)
-            .Or<HttpRequestException>()
-            .WaitAndRetryAsync(
-                retryCount: 3,
-                sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                onRetry: (outcome, timespan, retryCount, context) =>
-                {
-                    _logger.LogWarning(
-                        "Retry {RetryCount} after {Delay}s due to {Reason}",
-                        retryCount,
-                        timespan.TotalSeconds,
-                        outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString());
-                });
-    }
-
-    public async Task<ApiResponse> CallExternalApi(string endpoint)
-    {
-        var response = await _retryPolicy.ExecuteAsync(async () =>
-        {
-            return await _httpClient.GetAsync(endpoint);
-        });
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new InfrastructureException(
-                "ExternalAPI",
-                $"API call failed: {response.StatusCode}",
-                new HttpRequestException($"Status: {response.StatusCode}"));
-        }
-
-        return await response.Content.ReadFromJsonAsync<ApiResponse>();
-    }
-}
-```
-
----
-
-### 5.2 Circuit Breaker パターン
-
-```csharp
-using Polly.CircuitBreaker;
-
-public class ExternalApiServiceWithCircuitBreaker
-{
-    private readonly HttpClient _httpClient;
-    private readonly ILogger<ExternalApiServiceWithCircuitBreaker> _logger;
-    private readonly AsyncCircuitBreakerPolicy<HttpResponseMessage> _circuitBreakerPolicy;
-
-    public ExternalApiServiceWithCircuitBreaker(
-        HttpClient httpClient,
-        ILogger<ExternalApiServiceWithCircuitBreaker> logger)
-    {
-        _httpClient = httpClient;
-        _logger = logger;
-
-        // Circuit Breaker 設定
-        _circuitBreakerPolicy = Policy
-            .HandleResult<HttpResponseMessage>(r => !r.IsSuccessStatusCode)
-            .Or<HttpRequestException>()
-            .CircuitBreakerAsync(
-                handledEventsAllowedBeforeBreaking: 3,  // 3回失敗したら開放
-                durationOfBreak: TimeSpan.FromMinutes(1),  // 1分間開放
-                onBreak: (outcome, duration) =>
-                {
-                    _logger.LogError("Circuit breaker opened for {Duration}s", duration.TotalSeconds);
-                },
-                onReset: () =>
-                {
-                    _logger.LogInformation("Circuit breaker reset");
-                });
-    }
-
-    public async Task<ApiResponse> CallExternalApi(string endpoint)
-    {
-        try
-        {
-            var response = await _circuitBreakerPolicy.ExecuteAsync(async () =>
-            {
-                return await _httpClient.GetAsync(endpoint);
-            });
-
-            return await response.Content.ReadFromJsonAsync<ApiResponse>();
-        }
-        catch (BrokenCircuitException ex)
-        {
-            _logger.LogError(ex, "Circuit breaker is open");
-            throw new InfrastructureException(
-                "ExternalAPI",
-                "Service temporarily unavailable",
-                ex);
-        }
-    }
-}
+    API->>DB: DB接続
+    DB-->>API: 接続失敗
+    Note over API: InfrastructureException発生
+    API-->>API: 500 Internal Server Error
+    Note over API: ErrorCode: INFRASTRUCTURE_ERROR<br/>Service: Database
 ```
 
 ---
@@ -698,25 +306,9 @@ public class ExternalApiServiceWithCircuitBreaker
 
 ---
 
-## 7. ログ出力
+## 7. ログ戦略
 
-### 7.1 エラーログの書き方
-
-```csharp
-// NG: 例外を文字列で出力
-_logger.LogError($"Error: {ex.Message}");
-
-// OK: 構造化ログ + 例外オブジェクト
-_logger.LogError(ex, "Failed to get user: {UserId}", userId);
-
-// OK: エラーコードを含める
-_logger.LogError(ex, "Business rule violation: {ErrorCode}, {RuleName}",
-    ex.ErrorCode, ex.RuleName);
-```
-
----
-
-### 7.2 ログレベルの使い分け
+### 7.1 ログレベルの使い分け
 
 | レベル | 用途 | 例 |
 |--------|------|-----|
@@ -727,9 +319,50 @@ _logger.LogError(ex, "Business rule violation: {ErrorCode}, {RuleName}",
 
 ---
 
-## 8. 参考
+## 8. エラー後の対応パターン
+
+エラー発生後の挙動を3つのパターンに分類して対応方針を決定する。
+
+| パターン | 説明 | 対象エラー例 | ユーザー向け対応 |
+|---------|------|------------|----------------|
+| **再入力パターン** | ユーザーが入力を修正して再試行できる | 単項目エラー・必須未入力 | エラー箇所を示して修正を促す |
+| **やり直しパターン** | 操作を最初からやり直す必要がある | 排他エラー・業務タイミングエラー | 「再度操作してください」を表示 |
+| **お手上げパターン** | ユーザーでは対処不能。管理者対応が必要 | DBエラー・インフラ障害 | 「しばらく時間をおいてください」を表示 |
+
+### 8.1 排他エラーの扱い
+
+排他制御エラー（楽観的ロック違反）は**やり直しパターン**で対応する。
+
+```mermaid
+sequenceDiagram
+    participant UserA
+    participant UserB
+    participant Service
+    participant DB
+
+    UserA->>Service: データ取得（version=1）
+    UserB->>Service: データ取得（version=1）
+    UserA->>Service: 更新リクエスト（version=1）
+    Service->>DB: UPDATE WHERE version=1
+    DB-->>Service: 更新成功（version=2）
+    UserB->>Service: 更新リクエスト（version=1）
+    Service->>DB: UPDATE WHERE version=1
+    DB-->>Service: 0件更新（version不一致）
+    Service-->>UserB: 409 Conflict（やり直しパターン）
+    Note over UserB: 「他のユーザーが更新しました。再度操作してください」
+```
+
+> **バージョンキー採用の理由**: タイムスタンプは精度の問題で同時更新を検知できない場合があるため、整数のバージョンキーを使用する。
+
+---
+
+## 9. 参考
 
 - [ログ設計](logging.md)
 - [API設計規約](api-design.md)
 - [セキュリティ設計](security.md)
-- [シーケンス図](sequence-diagram.md)
+
+## 10. 参考書籍
+
+- 高安 厚思,『システム設計の謎を解く 改訂版』, SB Creative, 2017年, pp.251-252.
+- 野村総合研究所,『図解でなっとく！トラブル知らずのシステム設計 エラー制御・排他制御編』

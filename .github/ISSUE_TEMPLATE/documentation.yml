@@ -1,0 +1,79 @@
+name: 📚 Documentation
+description: Improve or add documentation
+title: "[DOC] "
+labels: ["documentation", "priority:low"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve our documentation!
+        
+  - type: dropdown
+    id: doc_type
+    attributes:
+      label: Documentation Type
+      description: What kind of documentation?
+      options:
+        - Design Document
+        - API Documentation
+        - User Guide
+        - README
+        - Code Comments
+        - Architecture Decision Record (ADR)
+        - Other
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: action
+    attributes:
+      label: Action
+      description: What needs to be done?
+      options:
+        - Create new documentation
+        - Update existing documentation
+        - Fix typos/errors
+        - Add examples
+        - Improve clarity
+    validations:
+      required: true
+      
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What documentation needs to be created or updated?
+      placeholder: Describe what needs to be documented
+    validations:
+      required: true
+      
+  - type: textarea
+    id: location
+    attributes:
+      label: Location
+      description: Where should this documentation be?
+      placeholder: |
+        - File: .github/docs/features/feature-name/README.md
+        - Section: External Design
+    validations:
+      required: true
+      
+  - type: textarea
+    id: content
+    attributes:
+      label: Content Outline
+      description: Outline of what should be included
+      placeholder: |
+        - Overview
+        - Setup instructions
+        - Examples
+        - API reference
+        
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Links to related code, existing docs, etc.
+      placeholder: |
+        - Related code: src/Features/Demo/
+        - Existing doc: .github/docs/features/n-plus-one-demo/
