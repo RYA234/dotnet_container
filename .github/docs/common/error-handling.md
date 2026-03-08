@@ -319,13 +319,50 @@ sequenceDiagram
 
 ---
 
-## 8. 参考
+## 8. エラー後の対応パターン
+
+エラー発生後の挙動を3つのパターンに分類して対応方針を決定する。
+
+| パターン | 説明 | 対象エラー例 | ユーザー向け対応 |
+|---------|------|------------|----------------|
+| **再入力パターン** | ユーザーが入力を修正して再試行できる | 単項目エラー・必須未入力 | エラー箇所を示して修正を促す |
+| **やり直しパターン** | 操作を最初からやり直す必要がある | 排他エラー・業務タイミングエラー | 「再度操作してください」を表示 |
+| **お手上げパターン** | ユーザーでは対処不能。管理者対応が必要 | DBエラー・インフラ障害 | 「しばらく時間をおいてください」を表示 |
+
+### 8.1 排他エラーの扱い
+
+排他制御エラー（楽観的ロック違反）は**やり直しパターン**で対応する。
+
+```mermaid
+sequenceDiagram
+    participant UserA
+    participant UserB
+    participant Service
+    participant DB
+
+    UserA->>Service: データ取得（version=1）
+    UserB->>Service: データ取得（version=1）
+    UserA->>Service: 更新リクエスト（version=1）
+    Service->>DB: UPDATE WHERE version=1
+    DB-->>Service: 更新成功（version=2）
+    UserB->>Service: 更新リクエスト（version=1）
+    Service->>DB: UPDATE WHERE version=1
+    DB-->>Service: 0件更新（version不一致）
+    Service-->>UserB: 409 Conflict（やり直しパターン）
+    Note over UserB: 「他のユーザーが更新しました。再度操作してください」
+```
+
+> **バージョンキー採用の理由**: タイムスタンプは精度の問題で同時更新を検知できない場合があるため、整数のバージョンキーを使用する。
+
+---
+
+## 9. 参考
 
 - [ログ設計](logging.md)
 - [API設計規約](api-design.md)
 - [セキュリティ設計](security.md)
 
-## 9. 参考書籍
+## 10. 参考書籍
 
 高安 厚思,『システム設計の謎を解く 改訂版』, SB Creative, 2017年, pp.251-252.
 
@@ -631,3 +668,4 @@ aws secretsmanager update-secret \
 - [クラス設計](class-design.md)
 - [シーケンス図](sequence-diagrams.md)
 - [運用設計手順書](../operations.md)
+- 野村総合研究所,『図解でなっとく！トラブル知らずのシステム設計 エラー制御・排他制御編』

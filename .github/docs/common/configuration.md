@@ -129,70 +129,82 @@ appsettings.Local.json
 
 ## 6. IConfiguration の使い方
 
-### 6.1 接続文字列の取得
+### 6.1 設定アクセスのレイヤー構造
 
-接続文字列へのアクセスは **Repository（データアクセス層）のみ** に限定する。Service / Controller は Repository インターフェース経由でデータを取得し、接続文字列には直接アクセスしない。
+接続文字列へのアクセスは **Repository（データアクセス層）のみ** に限定する。Service / Controller は Repository インターフェース経由でデータを取得し、設定値には直接アクセスしない。
 
-```csharp
-// ○ Repository でのみ IConfiguration を使用する
-public class NPlusOneRepository : INPlusOneRepository
-{
-    private readonly IConfiguration _configuration;
-
-    public NPlusOneRepository(IConfiguration configuration)
-    {
-        _configuration = configuration;
+```mermaid
+classDiagram
+    class ConfigurationSource {
+        <<設定ソース>>
+        +appsettings_json
+        +appsettings_Environment_json
+        +EnvironmentVariables
+        +UserSecrets
     }
 
-    private SqliteConnection GetConnection()
-    {
-        var connectionString = _configuration.GetConnectionString("DemoDatabase");
-        if (string.IsNullOrEmpty(connectionString))
-        {
-            throw new InvalidOperationException("Connection string 'DemoDatabase' not found");
-        }
-        return new SqliteConnection(connectionString);
+    class Repository {
+        <<データアクセス層>>
+        -IConfiguration configuration
+        +GetConnection() Connection
     }
-}
 
-// ○ Service は Repository に依存し、IConfiguration には触れない
-public class NPlusOneService : INPlusOneService
-{
-    private readonly INPlusOneRepository _repository;
-
-    public NPlusOneService(INPlusOneRepository repository)
-    {
-        _repository = repository;
+    class Service {
+        <<ビジネス層>>
+        -IRepository repository
     }
-}
+
+    class Controller {
+        <<プレゼンテーション層>>
+        -IService service
+    }
+
+    ConfigurationSource --> Repository : DI
+    Repository <-- Service : 依存
+    Controller --> Service : 依存
 ```
 
-### 6.2 任意の設定値の取得
+| クラス | 責務 |
+|--------|------|
+| ConfigurationSource | 設定値の供給元。環境に応じて優先順位が変わる |
+| Repository | IConfigurationにアクセスできる唯一のクラス |
+| Service | 設定値に直接アクセス不可。Repository経由のみ |
+| Controller | 設定値に直接アクセス不可。Service経由のみ |
 
-```csharp
-// 単一値
-var appName = _configuration["App:Name"];
+### 6.2 設定値の取得方法
 
-// セクション全体
-var appSection = _configuration.GetSection("App");
-
-// 型変換
-var version = _configuration.GetValue<string>("App:Version");
-```
+| 取得方法 | 用途 |
+|---------|------|
+| `config["App:Name"]` | 単一の設定値を文字列で取得 |
+| `config.GetSection("App")` | セクション全体をオブジェクトとして取得 |
+| `config.GetValue<T>("App:Version")` | 型変換して取得 |
+| `config.GetConnectionString("DemoDatabase")` | 接続文字列専用メソッド |
 
 ---
 
 ## 7. 設定値のバリデーション
 
-設定値が存在しない・不正な場合は起動時に検出する。
+設定値が存在しない・不正な場合は**起動時**に検出する。実行中に気づくより起動時に落とす方が早期発見できる。
 
-```csharp
-// Program.cs
-var connectionString = builder.Configuration.GetConnectionString("DemoDatabase");
-if (string.IsNullOrEmpty(connectionString))
-{
-    throw new InvalidOperationException("Required configuration 'ConnectionStrings:DemoDatabase' is missing.");
-}
+```mermaid
+sequenceDiagram
+    participant App as アプリケーション起動
+    participant Config as 設定ソース
+    participant Validator as 起動時バリデーション
+
+    App->>Config: 設定値を読み込む
+    Config-->>App: 設定値（または未設定）
+
+    App->>Validator: 必須設定値の存在チェック
+    alt 必須設定値が未設定
+        Validator-->>App: InvalidOperationException
+        Note over App: 起動失敗（早期検出）
+    end
+
+    alt 設定値が正常
+        Validator-->>App: OK
+        App->>App: アプリケーション起動完了
+    end
 ```
 
 ---
