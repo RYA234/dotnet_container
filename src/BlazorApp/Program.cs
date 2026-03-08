@@ -1,6 +1,7 @@
 using DotNetEnv;
 using BlazorApp.Features.Supabase.Services;
 using BlazorApp.Features.Demo.Services;
+using BlazorApp.Middleware;
 using Amazon.SecretsManager;
 using Amazon.SecretsManager.Model;
 using System.Text.Json;
@@ -87,10 +88,7 @@ builder.Services.AddScoped<INPlusOneService, NPlusOneService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Error");
-}
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 // Configure path base for /dotnet routing
 app.UsePathBase("/dotnet");
