@@ -113,5 +113,5 @@ tests/
 
 ## 参考
 
-- [テスト設計](../testing.md)
+- [テスト設計](../common/testing.md)
 - [Feature-based アーキテクチャ ADR](001-use-sqlite-for-education.md)

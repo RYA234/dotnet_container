@@ -91,6 +91,6 @@ static class AppSettings {
 
 ## 参考
 
-- [設定管理設計](../configuration.md)
-- [設定管理テスト仕様書](../configuration-test.md)
+- [設定管理設計](../common/configuration.md)
+- [設定管理テスト仕様書](../common/configuration-test.md)
 - ASP.NET Core 公式ドキュメント: Safe storage of app secrets in development
