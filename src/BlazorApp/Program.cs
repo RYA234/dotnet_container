@@ -84,6 +84,7 @@ builder.Services.AddScoped<ISupabaseService, SupabaseService>();
 // Demo database configuration (using raw SQL with SQL Server)
 // Connection string should be set in appsettings.json or environment variables
 builder.Services.AddScoped<INPlusOneService, NPlusOneService>();
+builder.Services.AddScoped<IValidationDemoService, ValidationDemoService>();
 
 var app = builder.Build();
 
