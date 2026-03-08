@@ -30,36 +30,67 @@
 
 ### 2.1 クラス構成図
 
+```mermaid
+classDiagram
+    class ApplicationLayer {
+        <<アプリケーション層>>
+        Service
+        Repository
+    }
+
+    class IDbConnectionFactory {
+        <<interface>>
+        +CreateConnection() IDbConnection
+        +CreateOpenConnection() IDbConnection
+        +BeginTransaction() IDbTransaction
+        +BeginTransaction(isolationLevel) IDbTransaction
+        +ExecuteInTransaction(operation) void
+        +TestConnection() bool
+    }
+
+    class PostgreSqlConnectionFactory {
+        <<PostgreSQL>>
+        +DatabaseType string
+    }
+
+    class SqliteConnectionFactory {
+        <<SQLite>>
+        +DatabaseType string
+    }
+
+    class SqlServerConnectionFactory {
+        <<SqlServer>>
+        +DatabaseType string
+    }
+
+    class Npgsql {
+        <<外部ライブラリ>>
+    }
+
+    class MicrosoftDataSqlite {
+        <<外部ライブラリ>>
+    }
+
+    class MicrosoftDataSqlClient {
+        <<外部ライブラリ>>
+    }
+
+    ApplicationLayer --> IDbConnectionFactory : 依存
+    IDbConnectionFactory <|.. PostgreSqlConnectionFactory : 実装
+    IDbConnectionFactory <|.. SqliteConnectionFactory : 実装
+    IDbConnectionFactory <|.. SqlServerConnectionFactory : 実装
+    PostgreSqlConnectionFactory --> Npgsql : 使用
+    SqliteConnectionFactory --> MicrosoftDataSqlite : 使用
+    SqlServerConnectionFactory --> MicrosoftDataSqlClient : 使用
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Application Layer                     │
-│  (Service, Repository がインターフェースを使用)            │
-└─────────────────────────────────────────────────────────┘
-                            │
-                            │ 依存
-                            ▼
-┌─────────────────────────────────────────────────────────┐
-│                  IDbConnectionFactory                    │
-│  + CreateConnection(): IDbConnection                     │
-│  + BeginTransaction(): IDbTransaction                    │
-└─────────────────────────────────────────────────────────┘
-                            △
-                            │ 実装
-        ┌───────────────────┼───────────────────┐
-        │                   │                   │
-        ▼                   ▼                   ▼
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│ PostgreSqlConn  │ │  SqliteConn     │ │ SqlServerConn   │
-│ ectionFactory   │ │  ectionFactory  │ │ ectionFactory   │
-└─────────────────┘ └─────────────────┘ └─────────────────┘
-        │                   │                   │
-        │                   │                   │
-        ▼                   ▼                   ▼
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│    Npgsql       │ │  Microsoft      │ │  Microsoft      │
-│  (PostgreSQL)   │ │  .Data.Sqlite   │ │  .Data.SqlCli.. │
-└─────────────────┘ └─────────────────┘ └─────────────────┘
-```
+
+| クラス | 責務 |
+|--------|------|
+| ApplicationLayer | Service・Repositoryがインターフェース経由でDB接続を使用 |
+| IDbConnectionFactory | RDBMS非依存の接続管理インターフェース |
+| PostgreSqlConnectionFactory | PostgreSQL固有の接続実装 |
+| SqliteConnectionFactory | SQLite固有の接続実装 |
+| SqlServerConnectionFactory | SQL Server固有の接続実装 |
 
 ---
 
@@ -227,17 +258,52 @@ Server=localhost;Database=mydb;User Id=myuser;Password=mypassword;TrustServerCer
 
 #### パターン1: 手動トランザクション管理
 
-1. 接続をオープン
-2. トランザクションを開始
-3. 複数のSQL操作を実行
-4. 成功時はコミット、失敗時はロールバック
-5. 接続とトランザクションをDispose
+```mermaid
+sequenceDiagram
+    participant Repository
+    participant Factory as IDbConnectionFactory
+    participant DB
+
+    Repository->>Factory: CreateOpenConnection()
+    Factory-->>Repository: IDbConnection
+
+    Repository->>Factory: BeginTransaction()
+    Factory-->>Repository: IDbTransaction
+
+    Repository->>DB: SQL操作1
+    Repository->>DB: SQL操作2
+
+    alt 成功
+        Repository->>DB: Commit()
+        Note over Repository: 接続・トランザクションをDispose
+    else 失敗
+        Repository->>DB: Rollback()
+        Note over Repository: 接続・トランザクションをDispose
+    end
+```
 
 #### パターン2: ファクトリのヘルパーメソッド使用
 
-1. ファクトリの `ExecuteInTransaction` メソッドを呼び出す
-2. トランザクション内で実行する処理を渡す
-3. 自動的にコミット/ロールバックが実行される
+```mermaid
+sequenceDiagram
+    participant Repository
+    participant Factory as IDbConnectionFactory
+    participant DB
+
+    Repository->>Factory: ExecuteInTransaction(operation)
+
+    Factory->>DB: 接続オープン・トランザクション開始
+    Factory->>Repository: operation実行
+
+    Repository->>DB: SQL操作1
+    Repository->>DB: SQL操作2
+
+    alt 成功
+        Factory->>DB: 自動コミット
+    else 失敗
+        Factory->>DB: 自動ロールバック
+    end
+```
 
 ---
 
@@ -305,14 +371,40 @@ RDBMS固有のエラーコードを共通のエラーコードに変換する。
 
 ### 8.3 カスタム例外階層
 
-| 例外クラス | 説明 |
-|----------|------|
-| DatabaseException | 基底例外クラス |
-| └─ ConnectionFailureException | 接続失敗 |
-| └─ DuplicateKeyException | 一意制約違反 |
-| └─ ForeignKeyViolationException | 外部キー制約違反 |
-| └─ QueryTimeoutException | クエリタイムアウト |
-| └─ DatabaseLockedException | データベースロック（SQLite専用） |
+```mermaid
+classDiagram
+    class DatabaseException {
+        <<基底例外>>
+        +string ErrorCode
+        +string Message
+    }
+
+    class ConnectionFailureException {
+        <<接続失敗>>
+    }
+
+    class DuplicateKeyException {
+        <<一意制約違反>>
+    }
+
+    class ForeignKeyViolationException {
+        <<外部キー制約違反>>
+    }
+
+    class QueryTimeoutException {
+        <<クエリタイムアウト>>
+    }
+
+    class DatabaseLockedException {
+        <<DBロック SQLite専用>>
+    }
+
+    DatabaseException <|-- ConnectionFailureException
+    DatabaseException <|-- DuplicateKeyException
+    DatabaseException <|-- ForeignKeyViolationException
+    DatabaseException <|-- QueryTimeoutException
+    DatabaseException <|-- DatabaseLockedException
+```
 
 **備考**: 詳細は [エラーハンドリング設計](error-handling.md) を参照。
 
