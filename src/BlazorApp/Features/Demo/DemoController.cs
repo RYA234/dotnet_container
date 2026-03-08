@@ -40,6 +40,21 @@ public class DemoController : Controller
         return View("~/Features/Demo/Views/DataStructures.cshtml");
     }
 
+    public IActionResult Logging()
+    {
+        return View("~/Features/Demo/Views/Logging.cshtml");
+    }
+
+    public IActionResult Validation()
+    {
+        return View("~/Features/Demo/Views/Validation.cshtml");
+    }
+
+    public IActionResult DatabaseConnection()
+    {
+        return View("~/Features/Demo/Views/DatabaseConnection.cshtml");
+    }
+
     // API Endpoints
     [HttpGet("api/demo/n-plus-one/bad")]
     public async Task<IActionResult> NPlusOneBad()
