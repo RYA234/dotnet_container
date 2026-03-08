@@ -308,7 +308,7 @@ aws secretsmanager update-secret \
 
 ## 参考
 
-- [外部IF設計](../external-design/external-interface.md)
+- [外部IF設計](external-interface.md)
 - [エラー処理設計](error-handling.md)
 - [運用設計手順書](../operations.md)
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)

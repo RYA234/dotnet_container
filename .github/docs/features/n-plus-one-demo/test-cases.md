@@ -313,4 +313,4 @@ reportgenerator -reports:**/coverage.cobertura.xml -targetdir:coverage
 
 - [外部設計書](external-design.md)
 - [内部設計書](internal-design.md)
-- [全体テスト設計](../../internal-design/logging-testing.md)
+- [全体テスト設計](../../common/logging-testing.md)
