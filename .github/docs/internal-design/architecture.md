@@ -1,155 +1,441 @@
 # アーキテクチャ設計
 
-## システムアーキテクチャ
+## 文書情報
+- **作成日**: 2025-12-12
+- **最終更新**: 2026-01-06
+- **バージョン**: 1.1
+- **ステータス**: 実装済み
+
+## 変更履歴
+
+| 日付 | バージョン | 変更者 | 変更内容 |
+|------|----------|--------|----------|
+| 2025-12-12 | 1.0 | - | 初版作成 |
+| 2026-01-06 | 1.1 | - | レビュー指摘事項を反映（フォルダ構造修正、実装状況明記） |
+
+---
+
+## 1. システム構成図
+
+### 1.1 全体アーキテクチャ
 
 ```mermaid
 graph TB
-    Client[ブラウザ]
-    ALB[Application Load Balancer]
-    ECS[ECS Fargate]
-    SQLite[(SQLite<br/>教育用)]
-    Postgres[(PostgreSQL<br/>Supabase)]
-    Secrets[AWS Secrets Manager]
+    subgraph "クライアント層"
+        Browser[ブラウザ]
+    end
 
-    Client -->|HTTPS| ALB
-    ALB -->|/dotnet/*| ECS
-    ECS -->|ローカルファイル| SQLite
-    ECS -->|REST API| Postgres
-    ECS -->|秘密情報取得| Secrets
+    subgraph "AWS Cloud"
+        subgraph "ECS Cluster"
+            subgraph "Docker Container"
+                WebApp[ASP.NET Core MVC]
+                SQLite[(SQLite<br/>ローカルデモ用)]
+            end
+        end
+    end
+
+    subgraph "外部サービス"
+        Supabase[Supabase<br/>Auth & Storage]
+    end
+
+    Browser --> WebApp
+    WebApp --> SQLite
+    WebApp --> Supabase
+```
+
+**Supabase の使用用途:**
+- **認証（Auth）**: ユーザー認証・認可（計画中）
+- **ストレージ**: ファイルアップロード（計画中）
+- **リアルタイムDB**: 将来的に検討
+
+**実装状況:**
+- [x] SupabaseService: 実装済み（`Features/Supabase/`）
+- [ ] 認証統合: 未実装
+- [ ] ストレージ統合: 未実装
+
+---
+
+### 1.2 デプロイ構成図
+
+```mermaid
+graph LR
+    subgraph "開発環境"
+        DevMachine[開発マシン<br/>Windows/Mac]
+        DevDocker[Docker Desktop<br/>SQLite]
+    end
+
+    subgraph "CI/CD"
+        GitHub[GitHub Actions<br/>ビルド・テスト]
+        ECR[AWS ECR<br/>イメージレジストリ]
+    end
+
+    subgraph "本番環境 (AWS)"
+        ALB[Application Load Balancer]
+        ECS[ECS Fargate<br/>ASP.NET Core Container]
+        SecretsManager[AWS Secrets Manager<br/>接続文字列・API Key]
+    end
+
+    DevMachine -->|git push| GitHub
+    GitHub -->|docker build| ECR
+    ECR -->|deploy| ECS
+    ALB --> ECS
+    ECS --> SecretsManager
+```
+
+**デプロイフロー**:
+1. 開発者が PR を作成し、main ブランチにマージ
+2. GitHub Actions が自動ビルド・テスト実行（CD開始）
+3. テスト成功後、Docker イメージを ECR にプッシュ
+4. ECS が新しいイメージをデプロイ
+5. ALB がトラフィックを新しいコンテナに切り替え
+
+---
+
+## 2. レイヤー構成
+
+### 2.1 Feature-based アーキテクチャ
+
+このプロジェクトは **Feature-based Architecture** を採用しています。
+
+```mermaid
+graph TD
+    subgraph "プレゼンテーション層"
+        Controller[Controller<br/>リクエスト受付・レスポンス返却]
+        View[Razor View<br/>HTML生成]
+    end
+
+    subgraph "ビジネスロジック層"
+        Service[Service<br/>ビジネスロジック実装]
+        Interface[Interface<br/>IFeatureService]
+    end
+
+    subgraph "データアクセス層"
+        EFCore[Entity Framework Core<br/>ORM]
+        Connection[DbContext<br/>PostgreSQL / SQLite]
+    end
+
+    subgraph "データベース"
+        DB[(PostgreSQL / SQLite)]
+    end
+
+    subgraph "共通層"
+        Config[Configuration<br/>設定管理]
+        Logger[ILogger<br/>ログ出力]
+        Middleware[Middleware<br/>例外処理・認証]
+    end
+
+    Controller --> Service
+    Controller --> View
+    Service --> Interface
+    Service --> EFCore
+    EFCore --> Connection
+    Connection --> DB
+    Service --> Config
+    Service --> Logger
+    Controller --> Middleware
 ```
 
 ---
 
-## レイヤー構成
+### 2.2 フォルダ構造
 
-### Feature-based アーキテクチャ
+> **注意:** プロジェクト名は `BlazorApp` ですが、実際は ASP.NET Core MVC アプリケーションです（歴史的経緯による名称）。
 
 ```
-Features/
-├── Demo/                      # エンジニア教育用
-│   ├── DemoController.cs      # コントローラー
-│   ├── Services/
-│   │   └── NPlusOneService.cs # ビジネスロジック
-│   ├── Models/                # DTO
-│   └── Views/                 # Razor View
-├── Inventory/                 # 在庫管理（未実装）
-├── Sales/                     # 販売管理（未実装）
-├── Production/                # 生産管理（未実装）
-└── Calculator/                # 電卓（WinFormsマイグレーション）
+src/BlazorApp/
+├── Features/               # 機能ごとに分類（Feature-based Architecture）
+│   ├── Demo/              # デモ機能（エンジニア教育用）
+│   │   ├── DemoController.cs    # Controller（Controllersフォルダは使用しない）
+│   │   ├── Services/            # NPlusOneService.cs, SelectStarService.cs, etc.
+│   │   ├── Models/              # DTO, Request, Response
+│   │   └── Views/               # Razor Views
+│   │
+│   ├── Home/              # ホーム機能
+│   │   ├── HomeController.cs    # Controller
+│   │   └── Views/               # Index.cshtml
+│   │
+│   ├── ReleaseNotes/      # リリースノート機能
+│   │   ├── ReleaseNotesController.cs  # Controller
+│   │   ├── Services/            # ReleaseNotesService.cs
+│   │   └── Views/               # Index.cshtml
+│   │
+│   ├── Calculator/        # 計算機能
+│   │   ├── CalculatorController.cs
+│   │   ├── CalculatorService.cs
+│   │   └── Views/
+│   │
+│   ├── Orders/            # 注文機能
+│   │   ├── OrdersController.cs
+│   │   ├── OrderService.cs
+│   │   └── Views/
+│   │
+│   └── Supabase/          # Supabase連携
+│       ├── SupabaseService.cs
+│       └── ISupabaseService.cs
+│
+├── Shared/                # 共通コンポーネント
+│   ├── Middleware/        # 例外処理、認証
+│   ├── Filters/           # アクションフィルター
+│   └── Extensions/        # 拡張メソッド
+│
+├── Infrastructure/        # インフラストラクチャ層
+│   ├── Database/          # DB接続管理
+│   └── External/          # 外部サービス連携
+│
+└── Program.cs             # エントリーポイント、DI設定
 ```
 
-### 理由
-- **機能ごとに凝集**: 関連するコード（Controller, Service, View）を同じフォルダに配置
-- **拡張しやすい**: 新機能は新しいフォルダを追加するだけ
-- **チーム開発向き**: 機能ごとに担当者を分けやすい
-
-**詳細**: [ADR-003: Feature-based アーキテクチャを採用（未作成）]
+**設計原則**:
+- 機能ごとにフォルダを分ける（Feature-based）
+- 技術レイヤーごとに分けない（Controller/ Services/ Models/ を別フォルダにしない）
+- 各機能は独立して開発・テスト可能
 
 ---
 
-## アーキテクチャパターン
+### 2.3 依存関係ルール
 
-### MVC (Model-View-Controller)
-- **Model**: データ構造（DTO, Response）
-- **View**: Razor テンプレート
-- **Controller**: HTTP リクエスト処理
+```mermaid
+graph LR
+    Controller[Controller]
+    Service[Service]
+    Interface[Interface]
+    Infrastructure[Infrastructure]
+    External[External Service]
 
-### データアクセス
-- **ADO.NET（素のSQL）**: ORM不使用
-- **理由**: N+1問題を明確にデモするため
-- **詳細**: [ADR-002: ORMを使わず素のSQLを採用](../adr/002-avoid-orm-use-raw-sql.md)
+    Controller -->|依存| Interface
+    Service -->|実装| Interface
+    Service -->|依存| Infrastructure
+    Infrastructure -->|依存| External
+    Controller -.->|禁止| Infrastructure
+    Controller -.->|禁止| External
+```
+
+**ルール**:
+1. **Controller は Service インターフェースにのみ依存**
+   - ✅ `private readonly INPlusOneService _service;`
+   - ❌ `new SqliteConnection()` を Controller で直接生成
+
+2. **Service は Infrastructure 層を使用**
+   - ✅ `GetConnection()` メソッドで接続取得
+   - ❌ 接続文字列をハードコーディング
+
+3. **循環依存を避ける**
+   - Service → Infrastructure → External の一方向依存
 
 ---
 
-## 技術スタック
+## 3. 技術スタック
 
-### バックエンド
+### 3.1 バックエンド
+
+| レイヤー | 技術 | バージョン | 用途 |
+|---------|------|----------|------|
+| Framework | ASP.NET Core MVC | 8.0 | Webアプリケーション |
+| Language | C# | 12.0 | プログラミング言語 |
+| Database Access | Entity Framework Core | 8.0 | データベースアクセス（ORM） |
+| Database (本番) | PostgreSQL | 16.x | RDS on AWS |
+| Database (デモ) | SQLite | 3.x | ローカルデモ用 |
+| DI Container | Microsoft.Extensions.DependencyInjection | 8.0 | 依存性注入 |
+| Logging | ILogger (Serilog) | - | ログ出力 |
+| Configuration | appsettings.json + 環境変数 | - | 設定管理 |
+
+**EF Core採用理由**: [ADR-003: Entity Framework Core を採用](../adr/003-use-ef-core.md)
+
+---
+
+### データベース選定
+
+| 環境 | DB | 用途 | ADR | 実装状況 |
+|------|-----|------|-----|----------|
+| 本番 | PostgreSQL (RDS) | 基幹システム | - | 🚧 計画中 |
+| デモ | SQLite | 教育用デモ（N+1問題等） | [ADR-001](../adr/001-use-sqlite-for-education.md) | ✅ 実装済み |
+
+**切り替え方法:**
+- `appsettings.json` の `ConnectionStrings` で管理
+- 環境変数 `ASPNETCORE_ENVIRONMENT` で自動切り替え
+- デモ機能は常にSQLiteを使用（`demo.db`）
+- 基幹システム機能はPostgreSQLを使用予定
+
+---
+
+### 3.2 フロントエンド
+
 | 技術 | バージョン | 用途 |
 |------|----------|------|
-| ASP.NET Core | 8.0 | Webフレームワーク |
-| C# | 12 | プログラミング言語 |
-| ADO.NET | - | データベースアクセス |
-
-### データベース
-| 技術 | 用途 |
-|------|------|
-| SQLite | 教育用デモ |
-| PostgreSQL (Supabase) | 基幹システム |
-
-### インフラ
-| 技術 | 用途 |
-|------|------|
-| ECS Fargate | コンテナ実行 |
-| ALB | ロードバランサー |
-| ECR | Dockerイメージ保管 |
-| CloudWatch Logs | ログ管理 |
-| AWS Secrets Manager | 秘密情報管理 |
+| Razor Pages | ASP.NET Core 8.0 | サーバーサイドレンダリング |
+| Bootstrap | 5.3 | CSSフレームワーク |
+| jQuery | 3.x | DOM操作・AJAX |
 
 ---
 
-## デプロイメント構成
+### 3.3 インフラストラクチャ
 
-### 本番環境
-```
-[GitHub] --push--> [GitHub Actions] --build--> [ECR]
-                                              |
-                                              v
-[ALB] --route--> [ECS Fargate] <--pull-- [ECR]
-                      |
-                      +---> SQLite (ローカルファイル)
-                      +---> Supabase (REST API)
-                      +---> Secrets Manager
-```
-
-### ローカル開発環境
-```
-[Visual Studio 2022]
-    |
-    +---> dotnet run
-    |
-    +---> SQLite (demo.db)
-    +---> Supabase (接続テスト用)
-```
+| サービス | 用途 | 環境 |
+|---------|------|------|
+| Docker | コンテナ化 | 開発・本番 |
+| AWS ECS Fargate | コンテナオーケストレーション | 本番 |
+| AWS RDS (PostgreSQL) | データベース | 本番 |
+| AWS Secrets Manager | 秘密情報管理 | 本番 |
+| GitHub Actions | CI/CD | 本番 |
+| Supabase | 認証・ストレージ | 本番 |
 
 ---
 
-## 設計原則
+### 3.4 開発ツール
 
-### SOLID原則（一部適用）
-- **Single Responsibility**: 各Serviceは1つの責務（N+1デモなど）
-- **Dependency Inversion**: IServiceをインターフェース化
-
-### 教育用デモの設計方針
-1. **透明性**: クエリ回数、実行時間を可視化
-2. **比較可能**: Bad版とGood版を並べて比較
-3. **シンプル**: 複雑な抽象化を避ける
-
----
-
-## 非機能要件
-
-### 性能
-| 項目 | 目標値 |
-|------|--------|
-| レスポンスタイム | < 1秒 |
-| 同時接続数 | 10（教育用のため小規模） |
-
-### 可用性
-| 項目 | 目標値 |
-|------|--------|
-| 稼働率 | 95%（教育用デモのため緩い） |
-| RPO（目標復旧時点） | 1日（デモデータは再生成可能） |
-| RTO（目標復旧時間） | 1時間 |
-
-### セキュリティ
-- HTTPS必須
-- SQLインジェクション対策（パラメータ化クエリ）
-- 秘密情報はSecrets Managerで管理
+| ツール | 用途 |
+|-------|------|
+| Visual Studio Code | IDE |
+| Docker Desktop | ローカル開発環境 |
+| xUnit | 単体テスト |
+| Playwright | E2Eテスト |
+| DocFx | APIドキュメント自動生成 |
+| GitHub Copilot | AI開発支援 |
+| Claude Code | AI開発支援（CLI） |
 
 ---
 
-## 参考
+## 4. 非機能要件
 
-- [クラス設計](class-design.md)
-- [DB物理設計](database-schema.md)
-- [ADR-002: ORMを使わず素のSQLを採用](../adr/002-avoid-orm-use-raw-sql.md)
+### 4.1 パフォーマンス
+
+| 項目 | 目標値 | 測定方法 |
+|------|--------|---------|
+| API レスポンスタイム | < 200ms (95%ile) | Application Insights |
+| ページ表示速度 | < 2秒 (初回) | Lighthouse |
+| データベースクエリ | < 100ms (平均) | ログ分析 |
+
+---
+
+### 4.2 スケーラビリティ
+
+- **水平スケーリング**: ECS Fargate タスク数を自動増減
+- **データベース**: RDS Multi-AZ でレプリケーション
+- **セッション管理**: ステートレス設計（外部セッションストア使用）
+
+---
+
+### 4.3 セキュリティ
+
+| 対策 | 実装方法 |
+|------|---------|
+| SQLインジェクション対策 | パラメータ化クエリのみ使用 |
+| XSS対策 | Razor View の自動エスケープ |
+| CSRF対策 | `[ValidateAntiForgeryToken]` 使用 |
+| 秘密情報管理 | AWS Secrets Manager |
+| HTTPS強制 | ALB で SSL/TLS 終端 |
+| 認証・認可 | Supabase Auth + ASP.NET Core Identity |
+
+---
+
+### 4.4 可用性
+
+| 項目 | 目標値 | 実装 |
+|------|--------|------|
+| SLA | 99.9% (月間) | Multi-AZ構成 |
+| RTO (Recovery Time Objective) | < 1時間 | 自動フェイルオーバー |
+| RPO (Recovery Point Objective) | < 5分 | RDS自動バックアップ |
+
+---
+
+## 5. デプロイ戦略
+
+### 5.1 デプロイ方式
+
+- **方式**: シングルタスク・デプロイ
+- **ECS タスク数**: 1
+- **手順**: GitHub Actions が ECR にイメージをプッシュ → ECS タスクを自動更新
+- **ダウンタイム**: あり（旧タスク停止 → 新タスク起動の間）
+- **理由**: シンプルな構成を優先
+---
+
+### 5.2 環境分離
+
+| 環境 | 用途 | デプロイ頻度 |
+|------|------|------------|
+| Development | ローカル開発 | 常時 |
+| Production | 本番環境 | 月2回 |
+
+---
+
+## 6. 監視・ログ
+
+### 6.1 ログレベル
+
+| レベル | 用途 | 例 |
+|--------|------|-----|
+| Error | エラー発生時 | DB接続失敗、例外発生 |
+| Warning | 警告事項 | リトライ実行、タイムアウト |
+| Information | 重要な処理 | API呼び出し、SQL実行時間 |
+| Debug | デバッグ情報 | 変数の値、条件分岐 |
+
+---
+
+### 6.2 メトリクス監視
+
+**実装状況:**
+- [x] CloudWatch Logs: 実装済み（ECSタスクログ自動収集）
+- [ ] CloudWatch Metrics（カスタム）: 未実装
+- [ ] CloudWatch Alarms: 未実装
+- [ ] SNS通知: 未実装
+
+**Phase 1（実装済み）:**
+
+```mermaid
+graph LR
+    App[ASP.NET Core App]
+    CloudWatch[CloudWatch Logs]
+
+    App -->|ログ出力| CloudWatch
+```
+
+- ECS タスクログ → CloudWatch Logs Group
+- ログレベル: Error, Warning, Information, Debug
+- ログの保持期間: 7日間
+
+**Phase 2（計画中）:**
+
+```mermaid
+graph LR
+    App[ASP.NET Core App]
+    CloudWatch[CloudWatch Logs]
+    Metrics[CloudWatch Metrics]
+    Alarm[CloudWatch Alarms]
+    SNS[SNS通知]
+
+    App -->|ログ出力| CloudWatch
+    App -->|メトリクス送信| Metrics
+    Metrics -->|閾値超過| Alarm
+    Alarm -->|通知| SNS
+```
+
+**監視項目（計画）:**
+- CPU使用率 (> 80%)
+- メモリ使用率 (> 80%)
+- エラーレート (> 1%)
+- レスポンスタイム (> 500ms)
+- SQLクエリ実行時間 (> 100ms)
+- API呼び出し回数
+
+---
+
+## 7. 参考
+
+### 設計書
+- [クラス図](class-diagram.md)
+- [シーケンス図](sequence-diagram.md)
+- [エラーハンドリング設計](error-handling.md)
+- [セキュリティ設計](security.md)
+- [ログ設計](logging.md)
+- [DB接続管理](database-connection.md)
+
+### ADR
+- [ADR-001: SQLiteを教育用デモに採用](../adr/001-use-sqlite-for-education.md)
+- [ADR-002: ORMを使わず素のSQLを採用（廃止）](../adr/002-avoid-orm-use-raw-sql.md)
+- [ADR-003: Entity Framework Core を採用](../adr/003-use-ef-core.md)
+
+### その他
+- [機能別設計書一覧](../features/README.md)
+- [GitHub Copilot Custom Instructions](../../copilot-instructions.md)
+- [DB接続管理](database-connection.md)
+
