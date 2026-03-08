@@ -5,6 +5,29 @@ body {
     background-color: #f5f5f5;
 }
 
+/* ネストドロップダウン */
+.dropdown-submenu {
+    position: relative;
+}
+
+.dropdown-submenu .dropdown-menu {
+    top: 0;
+    left: 100%;
+    margin-top: -1px;
+    display: none;
+}
+
+.dropdown-submenu:hover .dropdown-menu {
+    display: block;
+}
+
+.dropdown-submenu > a::after {
+    content: " ▶";
+    float: right;
+    font-size: 0.75em;
+    margin-top: 3px;
+}
+
 h1 {
     color: #333;
 }
