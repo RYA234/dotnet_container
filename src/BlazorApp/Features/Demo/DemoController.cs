@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using BlazorApp.Features.Demo.DTOs;
 using BlazorApp.Features.Demo.Services;
 using BlazorApp.Shared.DTOs;
 using BlazorApp.Shared.Exceptions;
@@ -8,11 +9,13 @@ namespace BlazorApp.Features.Demo;
 public class DemoController : Controller
 {
     private readonly INPlusOneService _nPlusOneService;
+    private readonly IValidationDemoService _validationDemoService;
     private readonly ILogger<DemoController> _logger;
 
-    public DemoController(INPlusOneService nPlusOneService, ILogger<DemoController> logger)
+    public DemoController(INPlusOneService nPlusOneService, IValidationDemoService validationDemoService, ILogger<DemoController> logger)
     {
         _nPlusOneService = nPlusOneService;
+        _validationDemoService = validationDemoService;
         _logger = logger;
     }
 
@@ -126,5 +129,36 @@ public class DemoController : Controller
     public IActionResult ThrowUnexpected()
     {
         throw new InvalidOperationException("予期しないエラーが発生しました（NullReferenceException等のランタイムエラー相当）");
+    }
+
+    // =============================================
+    // バリデーションデモ用 API エンドポイント
+    // Data Annotations と Service層バリデーションを体験する
+    // =============================================
+
+    [HttpPost("api/demo/validation/order")]
+    public IActionResult CreateOrder([FromBody] OrderRequest request)
+    {
+        // 単項目チェック（Data Annotations → ModelState）
+        if (!ModelState.IsValid)
+        {
+            var errors = ModelState
+                .Where(kv => kv.Value?.Errors.Count > 0)
+                .SelectMany(kv => kv.Value!.Errors.Select(e => new ValidationError(kv.Key, e.ErrorMessage)))
+                .ToList();
+            throw new ValidationException(errors);
+        }
+
+        // 業務ルールバリデーション（Service層）
+        _validationDemoService.ValidateOrder(request);
+
+        return Ok(new { message = "注文が正常に登録されました", customerCode = request.CustomerCode, totalAmount = request.TotalAmount });
+    }
+
+    [HttpPost("api/demo/validation/reset")]
+    public IActionResult ResetValidationDemo()
+    {
+        ValidationDemoService.Reset();
+        return Ok(new { message = "デモデータをリセットしました" });
     }
 }

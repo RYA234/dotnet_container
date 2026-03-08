@@ -3,11 +3,331 @@
 }
 
 <div class="container mt-4">
-    <h1 class="mb-4">✅ バリデーションデモ</h1>
-    <p class="lead">入力バリデーションのベストプラクティスを学ぶ</p>
+    <h1 class="mb-2">✅ バリデーションデモ</h1>
+    <p class="lead">Data Annotations・ModelState・Service層バリデーションの連携を体験できるデモ</p>
 
-    <div class="alert alert-warning">
-        <h4 class="alert-heading">🚧 このページは未実装です</h4>
-        <p>このデモページは現在開発中です。</p>
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h4 mb-0">📚 バリデーションの3分類</h2>
+        </div>
+        <div class="card-body">
+            <p>バリデーションは実装層によって3つに分類されます。</p>
+            <table class="table table-sm table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>分類</th>
+                        <th>実装層</th>
+                        <th>実装方法</th>
+                        <th>例</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>単項目チェック</strong></td>
+                        <td>Controller</td>
+                        <td>Data Annotations → ModelState</td>
+                        <td>必須・文字数・形式</td>
+                    </tr>
+                    <tr>
+                        <td><strong>複数項目関連チェック</strong></td>
+                        <td>Service</td>
+                        <td>ValidationException</td>
+                        <td>与信限度額超過</td>
+                    </tr>
+                    <tr>
+                        <td><strong>業務タイミングチェック</strong></td>
+                        <td>Service</td>
+                        <td>ValidationException + DB参照</td>
+                        <td>顧客存在確認・重複チェック</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <h5>RequestDTO（Data Annotations）</h5>
+                    <pre class="bg-light p-3 rounded"><code>public class OrderRequest
+{
+    [Required(ErrorMessage = "顧客コードは必須です")]
+    [MaxLength(10, ErrorMessage = "10文字以内で入力してください")]
+    public string? CustomerCode { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "1以上で入力してください")]
+    public int Quantity { get; set; }
+
+    [Required]
+    [EmailAddress(ErrorMessage = "形式が不正です")]
+    public string? Email { get; set; }
+}</code></pre>
+                </div>
+                <div class="col-md-6">
+                    <h5>Controller（ModelState チェック）</h5>
+                    <pre class="bg-light p-3 rounded"><code>public IActionResult CreateOrder(
+    [FromBody] OrderRequest request)
+{
+    if (!ModelState.IsValid)
+    {
+        var errors = ModelState
+            .Where(kv => kv.Value?.Errors.Count > 0)
+            .SelectMany(kv => kv.Value!.Errors
+                .Select(e => new ValidationError(kv.Key, e.ErrorMessage)))
+            .ToList();
+        throw new ValidationException(errors);
+    }
+    _service.ValidateOrder(request); // Service層へ
+    return Ok(...);
+}</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h2 class="h4 mb-0">🧪 注文フォームでバリデーションを体験</h2>
+        </div>
+        <div class="card-body">
+            <p>フォームに値を入力して送信すると、<strong>Controller層→Service層</strong>のバリデーションが順番に動作します。</p>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">顧客コード <span class="badge bg-secondary">最大10文字・必須</span></label>
+                        <input type="text" id="customerCode" class="form-control" placeholder="例: C001, C002, C003">
+                        <div class="form-text">登録済み顧客: C001（与信1万円）, C002（与信5千円）, C003（与信5万円）</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">注文日 <span class="badge bg-secondary">必須</span></label>
+                        <input type="date" id="orderDate" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">数量 <span class="badge bg-secondary">1以上</span></label>
+                        <input type="number" id="quantity" class="form-control" value="1">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">メールアドレス <span class="badge bg-secondary">形式チェック</span></label>
+                        <input type="text" id="email" class="form-control" placeholder="例: user@example.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">合計金額 <span class="badge bg-secondary">0より大きい値</span></label>
+                        <input type="number" id="totalAmount" class="form-control" value="1000" step="100">
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" onclick="submitOrder()">注文を送信</button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="resetDemo()">デモデータをリセット</button>
+                    </div>
+                </div>
+            </div>
+
+            <h5 class="mt-3">⚡ クイック入力（バリデーションエラーのパターンを即体験）</h5>
+            <div class="row g-2 mb-3">
+                <div class="col-auto">
+                    <button class="btn btn-warning btn-sm" onclick="setScenario('empty')">必須フィールド空</button>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-warning btn-sm" onclick="setScenario('toolong')">顧客コード超過（11文字）</button>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-warning btn-sm" onclick="setScenario('invalid-email')">メール形式不正</button>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-warning btn-sm" onclick="setScenario('zero-qty')">数量 0</button>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-danger btn-sm" onclick="setScenario('unknown-customer')">存在しない顧客</button>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-danger btn-sm" onclick="setScenario('credit-over')">与信超過</button>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-success btn-sm" onclick="setScenario('valid')">正常データ</button>
+                </div>
+            </div>
+
+            <h3 class="h5 mt-4">💻 レスポンス</h3>
+            <div id="result-area" style="display: none;">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="fw-bold">HTTP Status:</span>
+                    <span id="result-status" class="badge fs-6"></span>
+                </div>
+                <pre id="result-content" class="bg-light p-3 rounded"></pre>
+            </div>
+            <p id="result-placeholder" class="text-muted">← フォームを送信するとここにレスポンスが表示されます</p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h2 class="h4 mb-0">⚙️ バリデーションフロー</h2>
+        </div>
+        <div class="card-body">
+            <p>リクエストが来てからレスポンスを返すまでの流れ：</p>
+            <pre class="bg-light p-3 rounded"><code>Client → Controller
+         ↓
+    ModelState.IsValid? ──No──→ 400 (ValidationError: 単項目エラー)
+         ↓ Yes
+    Service.ValidateOrder()
+         ↓
+    顧客コード存在チェック ──NG──→ 400 (ValidationError: 存在しません)
+         ↓ OK
+    与信限度額チェック ──NG──→ 400 (ValidationError: 限度額超過)
+         ↓ OK
+    重複注文チェック ──NG──→ 400 (ValidationError: 重複あり)
+         ↓ OK
+    200 OK（注文登録成功）</code></pre>
+            <p class="mt-3"><strong>ポイント：</strong>どの層でエラーが発生しても <code>ValidationException</code> → <code>ExceptionHandlingMiddleware</code> が同じ形式のJSONを返します。</p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h2 class="h4 mb-0">🔗 参考リンク</h2>
+        </div>
+        <div class="card-body">
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2">
+                    📄 <strong>設計書</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/blob/main/.github/docs/common/validation.md" target="_blank">
+                        validation.md
+                    </a>
+                </li>
+                <li class="mb-2">
+                    📄 <strong>テスト設計書</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/blob/main/.github/docs/common/validation-test.md" target="_blank">
+                        validation-test.md
+                    </a>
+                </li>
+                <li class="mb-2">
+                    💻 <strong>ソースコード（DTO）</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/blob/main/src/BlazorApp/Features/Demo/DTOs/OrderRequest.cs" target="_blank">
+                        OrderRequest.cs
+                    </a>
+                </li>
+                <li class="mb-2">
+                    💻 <strong>ソースコード（Service）</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/blob/main/src/BlazorApp/Features/Demo/Services/ValidationDemoService.cs" target="_blank">
+                        ValidationDemoService.cs
+                    </a>
+                </li>
+                <li>
+                    🧪 <strong>テストコード</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/blob/main/BlazorApp.Tests/Features/Demo/ValidationDemoTests.cs" target="_blank">
+                        ValidationDemoTests.cs
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a href="~/Demo/Index" class="btn btn-secondary">← デモ一覧に戻る</a>
     </div>
 </div>
+
+<script>
+function setScenario(type) {
+    const today = new Date().toISOString().split('T')[0];
+    switch (type) {
+        case 'empty':
+            document.getElementById('customerCode').value = '';
+            document.getElementById('orderDate').value = '';
+            document.getElementById('quantity').value = '1';
+            document.getElementById('email').value = '';
+            document.getElementById('totalAmount').value = '1000';
+            break;
+        case 'toolong':
+            document.getElementById('customerCode').value = '12345678901'; // 11文字
+            document.getElementById('orderDate').value = today;
+            document.getElementById('quantity').value = '1';
+            document.getElementById('email').value = 'user@example.com';
+            document.getElementById('totalAmount').value = '1000';
+            break;
+        case 'invalid-email':
+            document.getElementById('customerCode').value = 'C001';
+            document.getElementById('orderDate').value = today;
+            document.getElementById('quantity').value = '1';
+            document.getElementById('email').value = 'not-an-email';
+            document.getElementById('totalAmount').value = '1000';
+            break;
+        case 'zero-qty':
+            document.getElementById('customerCode').value = 'C001';
+            document.getElementById('orderDate').value = today;
+            document.getElementById('quantity').value = '0';
+            document.getElementById('email').value = 'user@example.com';
+            document.getElementById('totalAmount').value = '1000';
+            break;
+        case 'unknown-customer':
+            document.getElementById('customerCode').value = 'C999';
+            document.getElementById('orderDate').value = today;
+            document.getElementById('quantity').value = '1';
+            document.getElementById('email').value = 'user@example.com';
+            document.getElementById('totalAmount').value = '1000';
+            break;
+        case 'credit-over':
+            document.getElementById('customerCode').value = 'C002';
+            document.getElementById('orderDate').value = today;
+            document.getElementById('quantity').value = '1';
+            document.getElementById('email').value = 'user@example.com';
+            document.getElementById('totalAmount').value = '99999';
+            break;
+        case 'valid':
+            document.getElementById('customerCode').value = 'C001';
+            document.getElementById('orderDate').value = today;
+            document.getElementById('quantity').value = '5';
+            document.getElementById('email').value = 'user@example.com';
+            document.getElementById('totalAmount').value = '5000';
+            break;
+    }
+}
+
+async function submitOrder() {
+    const resultArea = document.getElementById('result-area');
+    const resultStatus = document.getElementById('result-status');
+    const resultContent = document.getElementById('result-content');
+    const placeholder = document.getElementById('result-placeholder');
+
+    const orderDateValue = document.getElementById('orderDate').value;
+
+    const payload = {
+        customerCode: document.getElementById('customerCode').value || null,
+        orderDate: orderDateValue ? new Date(orderDateValue).toISOString() : null,
+        quantity: parseInt(document.getElementById('quantity').value) || 0,
+        email: document.getElementById('email').value || null,
+        totalAmount: parseFloat(document.getElementById('totalAmount').value) || 0
+    };
+
+    try {
+        const response = await fetch('/dotnet/api/demo/validation/order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+
+        resultStatus.textContent = response.status;
+        resultStatus.className = response.status >= 500
+            ? 'badge bg-danger fs-6'
+            : response.status >= 400
+                ? 'badge bg-warning text-dark fs-6'
+                : 'badge bg-success fs-6';
+
+        resultContent.textContent = JSON.stringify(data, null, 2);
+        resultArea.style.display = 'block';
+        placeholder.style.display = 'none';
+    } catch (error) {
+        resultContent.textContent = 'fetch エラー: ' + error.message;
+        resultArea.style.display = 'block';
+        placeholder.style.display = 'none';
+    }
+}
+
+async function resetDemo() {
+    try {
+        await fetch('/dotnet/api/demo/validation/reset', { method: 'POST' });
+        alert('デモデータをリセットしました。重複チェックがリセットされます。');
+    } catch (error) {
+        alert('リセット失敗: ' + error.message);
+    }
+}
+</script>
