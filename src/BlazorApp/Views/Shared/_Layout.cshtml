@@ -26,13 +26,25 @@
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdownEducation">
                             <li><a class="dropdown-item" href="~/Demo/Index">デモ一覧</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="~/Demo/Performance">✅ SQLパフォーマンス</a></li>
-                            <li><a class="dropdown-item" href="~/Demo/ErrorHandling">🚧 エラーハンドリング</a></li>
-                            <li><a class="dropdown-item" href="~/Demo/Security">🚧 セキュリティ</a></li>
+                            <li class="dropdown-submenu">
+                                <a class="dropdown-item" href="#">⚡ SQLパフォーマンス</a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="~/Demo/Performance">✅ N+1問題</a></li>
+                                    <li><a class="dropdown-item disabled" href="#">🚧 インデックス（未実装）</a></li>
+                                </ul>
+                            </li>
                             <li><a class="dropdown-item" href="~/Demo/DataStructures">🚧 データ構造とアルゴリズム</a></li>
-                            <li><a class="dropdown-item" href="~/Demo/Logging">🚧 ログ</a></li>
-                            <li><a class="dropdown-item" href="~/Demo/Validation">🚧 バリデーション</a></li>
-                            <li><a class="dropdown-item" href="~/Demo/DatabaseConnection">🚧 DB接続</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li class="dropdown-submenu">
+                                <a class="dropdown-item" href="#">📋 共通設計</a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="~/Demo/ErrorHandling">🚧 エラーハンドリング</a></li>
+                                    <li><a class="dropdown-item" href="~/Demo/Security">🚧 セキュリティ</a></li>
+                                    <li><a class="dropdown-item" href="~/Demo/Logging">🚧 ログ</a></li>
+                                    <li><a class="dropdown-item" href="~/Demo/Validation">🚧 バリデーション</a></li>
+                                    <li><a class="dropdown-item" href="~/Demo/DatabaseConnection">🚧 DB接続</a></li>
+                                </ul>
+                            </li>
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
