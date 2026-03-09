@@ -11,13 +11,15 @@ public class DemoController : Controller
     private readonly INPlusOneService _nPlusOneService;
     private readonly IValidationDemoService _validationDemoService;
     private readonly ILoggingDemoService _loggingDemoService;
+    private readonly IDatabaseConnectionDemoService _dbConnectionDemoService;
     private readonly ILogger<DemoController> _logger;
 
-    public DemoController(INPlusOneService nPlusOneService, IValidationDemoService validationDemoService, ILoggingDemoService loggingDemoService, ILogger<DemoController> logger)
+    public DemoController(INPlusOneService nPlusOneService, IValidationDemoService validationDemoService, ILoggingDemoService loggingDemoService, IDatabaseConnectionDemoService dbConnectionDemoService, ILogger<DemoController> logger)
     {
         _nPlusOneService = nPlusOneService;
         _validationDemoService = validationDemoService;
         _loggingDemoService = loggingDemoService;
+        _dbConnectionDemoService = dbConnectionDemoService;
         _logger = logger;
     }
 
@@ -205,6 +207,50 @@ public class DemoController : Controller
             original = request.Input,
             masked,
             message = "機密情報をマスキングしてログ出力しました"
+        });
+    }
+
+    // =============================================
+    // DB接続デモ用 API エンドポイント
+    // IDbConnectionFactory 経由の接続管理・クエリ発行を体験する
+    // =============================================
+
+    [HttpGet("api/demo/db/test")]
+    public async Task<IActionResult> DbConnectionTest()
+    {
+        var result = await _dbConnectionDemoService.TestConnectionAsync();
+        return Ok(new
+        {
+            isConnected = result.IsConnected,
+            databaseType = result.DatabaseType,
+            connectionString = result.ConnectionString,
+            elapsedMs = result.ElapsedMs,
+            message = result.IsConnected ? "接続成功" : "接続失敗"
+        });
+    }
+
+    [HttpGet("api/demo/db/tables")]
+    public async Task<IActionResult> DbGetTables()
+    {
+        var tables = await _dbConnectionDemoService.GetTablesAsync();
+        var tableList = tables.ToList();
+        return Ok(new
+        {
+            tables = tableList,
+            count = tableList.Count,
+            message = $"{tableList.Count}件のテーブルが見つかりました"
+        });
+    }
+
+    [HttpGet("api/demo/db/count")]
+    public async Task<IActionResult> DbGetRowCount([FromQuery] string table = "Users")
+    {
+        var count = await _dbConnectionDemoService.GetRowCountAsync(table);
+        return Ok(new
+        {
+            tableName = table,
+            rowCount = count,
+            message = $"{table} テーブルに {count} 件のデータがあります"
         });
     }
 }

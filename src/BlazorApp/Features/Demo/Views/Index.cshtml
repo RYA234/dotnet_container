@@ -41,8 +41,8 @@
         <!-- エラーハンドリング -->
         <div class="col-md-6 mb-4">
             <div class="card h-100">
-                <div class="card-header bg-secondary text-white">
-                    <h2 class="h5 mb-0">🚧 2. エラーハンドリング</h2>
+                <div class="card-header bg-success text-white">
+                    <h2 class="h5 mb-0">✅ 2. エラーハンドリング</h2>
                 </div>
                 <div class="card-body">
                     <p class="card-text">例外処理のベストプラクティスデモ</p>
@@ -52,10 +52,10 @@
                         <li>カスタム例外の設計</li>
                         <li>リトライ戦略とCircuit Breakerパターン</li>
                     </ul>
-                    <a href="~/Demo/ErrorHandling" class="btn btn-secondary btn-sm">デモを見る →</a>
+                    <a href="~/Demo/ErrorHandling" class="btn btn-success btn-sm">デモを見る →</a>
                 </div>
                 <div class="card-footer text-muted">
-                    <small>🚧 未実装（次に実装予定）</small>
+                    <small>✅ 実装済み</small>
                 </div>
             </div>
         </div>
@@ -100,6 +100,72 @@
                 </div>
                 <div class="card-footer text-muted">
                     <small>🚧 未実装</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- バリデーション -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h2 class="h5 mb-0">✅ 5. バリデーション</h2>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Data Annotations と ModelState によるバリデーションデモ</p>
+                    <ul class="small">
+                        <li>必須項目・文字数・範囲検証</li>
+                        <li>カスタムバリデーション属性</li>
+                        <li>ビジネスルール検証（重複チェック等）</li>
+                        <li>エラーメッセージのカスタマイズ</li>
+                    </ul>
+                    <a href="~/Demo/Validation" class="btn btn-success btn-sm">デモを見る →</a>
+                </div>
+                <div class="card-footer text-muted">
+                    <small>✅ 実装済み</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- ログ -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h2 class="h5 mb-0">✅ 6. ログ</h2>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">構造化ログ・パフォーマンス計測・機密情報マスキングのデモ</p>
+                    <ul class="small">
+                        <li>ログレベルの使い分け（Debug/Info/Warning/Error）</li>
+                        <li>構造化ログ（メッセージテンプレート）</li>
+                        <li>パフォーマンス計測と警告</li>
+                        <li>接続情報・APIキーのマスキング</li>
+                    </ul>
+                    <a href="~/Demo/Logging" class="btn btn-success btn-sm">デモを見る →</a>
+                </div>
+                <div class="card-footer text-muted">
+                    <small>✅ 実装済み</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- DB接続 -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h2 class="h5 mb-0">✅ 7. DB接続</h2>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">IDbConnectionFactory パターンによるRDBMS非依存の接続管理デモ</p>
+                    <ul class="small">
+                        <li>IDbConnectionFactory インターフェース設計</li>
+                        <li>SQLite 実装（デモ用）</li>
+                        <li>接続テスト・テーブル一覧・行数取得</li>
+                        <li>SQLインジェクション対策（ホワイトリスト検証）</li>
+                    </ul>
+                    <a href="~/Demo/DatabaseConnection" class="btn btn-success btn-sm">デモを見る →</a>
+                </div>
+                <div class="card-footer text-muted">
+                    <small>✅ 実装済み</small>
                 </div>
             </div>
         </div>
