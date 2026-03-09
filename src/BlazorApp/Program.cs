@@ -85,6 +85,7 @@ builder.Services.AddScoped<ISupabaseService, SupabaseService>();
 // Connection string should be set in appsettings.json or environment variables
 builder.Services.AddScoped<INPlusOneService, NPlusOneService>();
 builder.Services.AddScoped<IValidationDemoService, ValidationDemoService>();
+builder.Services.AddScoped<ILoggingDemoService, LoggingDemoService>();
 
 var app = builder.Build();
 

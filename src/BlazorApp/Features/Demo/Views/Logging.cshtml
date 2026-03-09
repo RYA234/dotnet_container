@@ -3,11 +3,218 @@
 }
 
 <div class="container mt-4">
-    <h1 class="mb-4">📋 ログデモ</h1>
-    <p class="lead">ログ設計のベストプラクティスを学ぶ</p>
+    <h1 class="mb-2">✅ ログデモ</h1>
+    <p class="lead">ログレベルの使い分け・パフォーマンス計測・機密情報マスキングを体験するデモ</p>
 
-    <div class="alert alert-warning">
-        <h4 class="alert-heading">🚧 このページは未実装です</h4>
-        <p>このデモページは現在開発中です。</p>
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h4 mb-0">📚 ログレベルの使い分け</h2>
+        </div>
+        <div class="card-body">
+            <table class="table table-sm table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>レベル</th>
+                        <th>用途</th>
+                        <th>例</th>
+                        <th>本番出力</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="table-secondary">
+                        <td><strong>Debug</strong></td>
+                        <td>開発時のデバッグ情報</td>
+                        <td>SQL実行・メソッド呼び出し</td>
+                        <td>❌</td>
+                    </tr>
+                    <tr class="table-success">
+                        <td><strong>Information</strong></td>
+                        <td>重要な処理の記録</td>
+                        <td>ユーザー作成成功・API呼び出し</td>
+                        <td>✅</td>
+                    </tr>
+                    <tr class="table-warning">
+                        <td><strong>Warning</strong></td>
+                        <td>回復可能な問題・注意事象</td>
+                        <td>リトライ実行・遅延検出</td>
+                        <td>✅</td>
+                    </tr>
+                    <tr class="table-danger">
+                        <td><strong>Error</strong></td>
+                        <td>例外・回復不可能なエラー</td>
+                        <td>DB接続失敗・予期しない例外</td>
+                        <td>✅</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h2 class="h4 mb-0">🧪 デモ 1: 全ログレベルを出力</h2>
+        </div>
+        <div class="card-body">
+            <p>ボタンを押すと Debug / Information / Warning / Error の4レベルをサーバーコンソールに出力します。</p>
+            <div class="mb-3">
+                <pre class="bg-light p-3 rounded"><code>_logger.LogDebug("【Debug】SQL実行: SELECT * FROM Users...");
+_logger.LogInformation("【Information】ユーザーが作成されました: UserId=123");
+_logger.LogWarning("【Warning】レスポンスが遅延しています: 1500ms");
+_logger.LogError("【Error】データベース接続に失敗しました");</code></pre>
+            </div>
+            <button class="btn btn-dark" onclick="callApi('levels')">全レベルをログ出力</button>
+            <div id="result-levels" class="mt-3" style="display:none;">
+                <pre id="result-levels-content" class="bg-light p-3 rounded"></pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h2 class="h4 mb-0">🧪 デモ 2: パフォーマンス計測ログ</h2>
+        </div>
+        <div class="card-body">
+            <p>処理時間が <strong>1000ms を超えると Warning</strong>、以下なら Information が出力されます。</p>
+            <div class="mb-3">
+                <pre class="bg-light p-3 rounded"><code>if (elapsedMs > 1000)
+    _logger.LogWarning("Slow operation detected: {Name} took {ElapsedMs}ms", ...);
+else
+    _logger.LogInformation("Operation completed: {Name} in {ElapsedMs}ms", ...);</code></pre>
+            </div>
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <label class="form-label mb-0">処理時間（ms）:</label>
+                <input type="number" id="elapsed-ms" class="form-control w-auto" value="500" min="0" max="5000" step="100">
+            </div>
+            <div class="d-flex gap-2 flex-wrap mb-2">
+                <button class="btn btn-success btn-sm" onclick="setElapsed(300)">300ms（正常）</button>
+                <button class="btn btn-success btn-sm" onclick="setElapsed(1000)">1000ms（境界値）</button>
+                <button class="btn btn-warning btn-sm" onclick="setElapsed(1100)">1100ms（Warning）</button>
+                <button class="btn btn-warning btn-sm" onclick="setElapsed(3000)">3000ms（超遅延）</button>
+            </div>
+            <button class="btn btn-warning text-dark" onclick="callApiPerformance()">パフォーマンスログ出力</button>
+            <div id="result-performance" class="mt-3" style="display:none;">
+                <pre id="result-performance-content" class="bg-light p-3 rounded"></pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h2 class="h4 mb-0">🧪 デモ 3: 機密情報マスキング</h2>
+        </div>
+        <div class="card-body">
+            <p><code>password</code> / <code>apikey</code> / <code>token</code> / <code>secret</code> を含む文字列は <strong>*** にマスクされてログ出力</strong>されます。</p>
+            <div class="mb-3">
+                <pre class="bg-light p-3 rounded"><code>// NG: そのままログ出力（機密情報が漏れる）
+_logger.LogInformation("Connecting with password=MySecret123");
+
+// OK: マスキングしてからログ出力
+var masked = LogMaskingHelper.Mask(input); // → "password=***"
+_logger.LogInformation("接続情報: {Info}", masked);</code></pre>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">ログに出力したい文字列:</label>
+                <input type="text" id="mask-input" class="form-control" value="Connecting with password=Secret123 and apikey=sk_test_abc">
+            </div>
+            <div class="d-flex gap-2 flex-wrap mb-2">
+                <button class="btn btn-secondary btn-sm" onclick="setMaskInput('password=MySecret123')">password のみ</button>
+                <button class="btn btn-secondary btn-sm" onclick="setMaskInput('apikey=sk_test_123456')">apikey のみ</button>
+                <button class="btn btn-secondary btn-sm" onclick="setMaskInput('token=eyJhbGciOiJIUzI1NiJ9')">token のみ</button>
+                <button class="btn btn-secondary btn-sm" onclick="setMaskInput('password=abc123 and apikey=sk_test_456')">複数</button>
+                <button class="btn btn-success btn-sm" onclick="setMaskInput('User email is test@example.com')">非機密情報</button>
+            </div>
+            <button class="btn btn-danger" onclick="callApiMask()">マスキングしてログ出力</button>
+            <div id="result-mask" class="mt-3" style="display:none;">
+                <pre id="result-mask-content" class="bg-light p-3 rounded"></pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h2 class="h4 mb-0">🔗 参考リンク</h2>
+        </div>
+        <div class="card-body">
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2">
+                    📄 <strong>設計書</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/blob/main/.github/docs/common/logging.md" target="_blank">logging.md</a>
+                </li>
+                <li class="mb-2">
+                    📄 <strong>テスト設計書</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/blob/main/.github/docs/common/logging-test.md" target="_blank">logging-test.md</a>
+                </li>
+                <li class="mb-2">
+                    💻 <strong>ソースコード（Service）</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/blob/main/src/BlazorApp/Features/Demo/Services/LoggingDemoService.cs" target="_blank">LoggingDemoService.cs</a>
+                </li>
+                <li>
+                    🧪 <strong>テストコード</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/blob/main/BlazorApp.Tests/Features/Demo/LoggingDemoTests.cs" target="_blank">LoggingDemoTests.cs</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a href="~/Demo/Index" class="btn btn-secondary">← デモ一覧に戻る</a>
     </div>
 </div>
+
+<script>
+async function callApi(type) {
+    const resultEl = document.getElementById('result-' + type);
+    const contentEl = document.getElementById('result-' + type + '-content');
+    try {
+        const response = await fetch('/dotnet/api/demo/logging/' + type);
+        const data = await response.json();
+        contentEl.textContent = JSON.stringify(data, null, 2);
+        resultEl.style.display = 'block';
+    } catch (e) {
+        contentEl.textContent = 'エラー: ' + e.message;
+        resultEl.style.display = 'block';
+    }
+}
+
+function setElapsed(ms) {
+    document.getElementById('elapsed-ms').value = ms;
+}
+
+async function callApiPerformance() {
+    const ms = document.getElementById('elapsed-ms').value;
+    const resultEl = document.getElementById('result-performance');
+    const contentEl = document.getElementById('result-performance-content');
+    try {
+        const response = await fetch('/dotnet/api/demo/logging/performance?elapsedMs=' + ms);
+        const data = await response.json();
+        contentEl.textContent = JSON.stringify(data, null, 2);
+        resultEl.style.display = 'block';
+    } catch (e) {
+        contentEl.textContent = 'エラー: ' + e.message;
+        resultEl.style.display = 'block';
+    }
+}
+
+function setMaskInput(value) {
+    document.getElementById('mask-input').value = value;
+}
+
+async function callApiMask() {
+    const input = document.getElementById('mask-input').value;
+    const resultEl = document.getElementById('result-mask');
+    const contentEl = document.getElementById('result-mask-content');
+    try {
+        const response = await fetch('/dotnet/api/demo/logging/mask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ input })
+        });
+        const data = await response.json();
+        contentEl.textContent = JSON.stringify(data, null, 2);
+        resultEl.style.display = 'block';
+    } catch (e) {
+        contentEl.textContent = 'エラー: ' + e.message;
+        resultEl.style.display = 'block';
+    }
+}
+</script>
