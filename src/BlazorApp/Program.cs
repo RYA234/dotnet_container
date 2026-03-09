@@ -2,6 +2,7 @@ using DotNetEnv;
 using BlazorApp.Features.Supabase.Services;
 using BlazorApp.Features.Demo.Services;
 using BlazorApp.Middleware;
+using BlazorApp.Shared.Data;
 using Amazon.SecretsManager;
 using Amazon.SecretsManager.Model;
 using System.Text.Json;
@@ -86,6 +87,15 @@ builder.Services.AddScoped<ISupabaseService, SupabaseService>();
 builder.Services.AddScoped<INPlusOneService, NPlusOneService>();
 builder.Services.AddScoped<IValidationDemoService, ValidationDemoService>();
 builder.Services.AddScoped<ILoggingDemoService, LoggingDemoService>();
+
+// DB接続デモ用 (SQLite) — ContentRootPath で絶対パスに変換してデプロイ環境でも動作するようにする
+var sqliteDbPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "database_connection_demo.db");
+var sqliteConnectionString = builder.Configuration.GetConnectionString("DemoSQLite")
+    ?.Replace("Data Source=Data/database_connection_demo.db", $"Data Source={sqliteDbPath}")
+    ?? $"Data Source={sqliteDbPath};";
+builder.Services.AddSingleton<IDbConnectionFactory>(sp =>
+    new SqliteConnectionFactory(sqliteConnectionString, sp.GetRequiredService<ILogger<SqliteConnectionFactory>>()));
+builder.Services.AddScoped<IDatabaseConnectionDemoService, DatabaseConnectionDemoService>();
 
 var app = builder.Build();
 

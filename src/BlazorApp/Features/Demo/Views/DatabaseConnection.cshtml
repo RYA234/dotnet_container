@@ -3,11 +3,172 @@
 }
 
 <div class="container mt-4">
-    <h1 class="mb-4">🗄️ DB接続デモ</h1>
-    <p class="lead">データベース接続管理のベストプラクティスを学ぶ</p>
+    <h1 class="mb-2">✅ DB接続デモ</h1>
+    <p class="lead">IDbConnectionFactory パターンによるRDBMS非依存の接続管理を体験するデモ</p>
 
-    <div class="alert alert-warning">
-        <h4 class="alert-heading">🚧 このページは未実装です</h4>
-        <p>このデモページは現在開発中です。</p>
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h4 mb-0">📚 IDbConnectionFactory パターン</h2>
+        </div>
+        <div class="card-body">
+            <p>接続先DBをコードを変えずに設定だけで切り替えられる設計パターンです。</p>
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>インターフェース（RDBMS非依存）</h5>
+                    <pre class="bg-light p-3 rounded"><code>public interface IDbConnectionFactory
+{
+    string DatabaseType { get; }
+    IDbConnection CreateConnection();
+    Task&lt;IDbConnection&gt; CreateOpenConnectionAsync();
+    Task&lt;bool&gt; TestConnectionAsync();
+}</code></pre>
+                </div>
+                <div class="col-md-6">
+                    <h5>appsettings.json（設定で切り替え）</h5>
+                    <pre class="bg-light p-3 rounded"><code>{
+  "Database": {
+    "Provider": "SQLite"  // ← ここを変えるだけ
+  },
+  "ConnectionStrings": {
+    "DemoSQLite": "Data Source=demo.db;"
+  }
+}</code></pre>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h5>DI登録（Program.cs）</h5>
+                    <pre class="bg-light p-3 rounded"><code>// Provider設定に応じてファクトリを切り替え
+var connectionString = builder.Configuration.GetConnectionString("DemoSQLite");
+builder.Services.AddSingleton&lt;IDbConnectionFactory&gt;(sp =>
+    new SqliteConnectionFactory(connectionString, sp.GetRequiredService&lt;ILogger&lt;SqliteConnectionFactory&gt;&gt;()));
+
+// Service は IDbConnectionFactory に依存するだけ（RDBMS種別を意識しない）
+builder.Services.AddScoped&lt;IDatabaseConnectionDemoService, DatabaseConnectionDemoService&gt;();</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h2 class="h4 mb-0">🧪 デモ 1: 接続テスト</h2>
+        </div>
+        <div class="card-body">
+            <p>Factory 経由でDBに接続し、接続状態・DB種別・接続時間を確認します。</p>
+            <pre class="bg-light p-3 rounded mb-3"><code>// Repository での使用例
+public async Task DoSomethingAsync()
+{
+    using var connection = await _factory.CreateOpenConnectionAsync();
+    // ... クエリ実行
+} // ← using で自動的にClose・Dispose</code></pre>
+            <button class="btn btn-dark" onclick="callApi('test')">接続テスト実行</button>
+            <div id="result-test" class="mt-3" style="display:none;">
+                <pre id="result-test-content" class="bg-light p-3 rounded"></pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h2 class="h4 mb-0">🧪 デモ 2: テーブル一覧取得</h2>
+        </div>
+        <div class="card-body">
+            <p>SQLite の <code>sqlite_master</code> テーブルから存在するテーブル一覧を取得します。</p>
+            <pre class="bg-light p-3 rounded mb-3"><code>// SQLite のメタデータテーブルを使用
+var command = connection.CreateCommand();
+command.CommandText =
+    "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name";</code></pre>
+            <button class="btn btn-info text-white" onclick="callApi('tables')">テーブル一覧取得</button>
+            <div id="result-tables" class="mt-3" style="display:none;">
+                <pre id="result-tables-content" class="bg-light p-3 rounded"></pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h2 class="h4 mb-0">🧪 デモ 3: 行数取得（SQLインジェクション対策）</h2>
+        </div>
+        <div class="card-body">
+            <p>テーブルの行数を取得します。テーブル名は<strong>ホワイトリスト検証</strong>でSQLインジェクションを防ぎます。</p>
+            <pre class="bg-light p-3 rounded mb-3"><code>// NG: 文字列連結（SQLインジェクションの危険）
+command.CommandText = $"SELECT COUNT(*) FROM " + tableName;
+
+// OK: ホワイトリスト検証してから使用
+var tables = await GetTablesAsync();
+if (!tables.Contains(tableName))
+    throw new ArgumentException("テーブルが存在しません");
+command.CommandText = $"SELECT COUNT(*) FROM "{tableName}"";</code></pre>
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <label class="form-label mb-0">テーブル名:</label>
+                <input type="text" id="table-name" class="form-control w-auto" value="Users" placeholder="Users, Departments など">
+            </div>
+            <button class="btn btn-success" onclick="callApiCount()">行数取得</button>
+            <div id="result-count" class="mt-3" style="display:none;">
+                <pre id="result-count-content" class="bg-light p-3 rounded"></pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h2 class="h4 mb-0">🔗 参考リンク</h2>
+        </div>
+        <div class="card-body">
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2">
+                    📄 <strong>設計書</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/blob/main/.github/docs/common-design/database-connection.md" target="_blank">database-connection.md</a>
+                </li>
+                <li class="mb-2">
+                    📄 <strong>ADR-002</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/blob/main/.github/docs/adr/002-avoid-orm-use-raw-sql.md" target="_blank">Raw SQL採用理由</a>
+                </li>
+                <li class="mb-2">
+                    💻 <strong>ソースコード（Factory）</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/blob/main/src/BlazorApp/Shared/Data/SqliteConnectionFactory.cs" target="_blank">SqliteConnectionFactory.cs</a>
+                </li>
+                <li>
+                    🧪 <strong>テストコード</strong>:
+                    <a href="https://github.com/RYA234/dotnet_container/blob/main/BlazorApp.Tests/Shared/Data/SqliteConnectionFactoryTests.cs" target="_blank">SqliteConnectionFactoryTests.cs</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a href="~/Demo/Index" class="btn btn-secondary">← デモ一覧に戻る</a>
     </div>
 </div>
+
+<script>
+async function callApi(type) {
+    const resultEl = document.getElementById('result-' + type);
+    const contentEl = document.getElementById('result-' + type + '-content');
+    try {
+        const response = await fetch('/dotnet/api/demo/db/' + type);
+        const data = await response.json();
+        contentEl.textContent = JSON.stringify(data, null, 2);
+        resultEl.style.display = 'block';
+    } catch (e) {
+        contentEl.textContent = 'エラー: ' + e.message;
+        resultEl.style.display = 'block';
+    }
+}
+
+async function callApiCount() {
+    const tableName = document.getElementById('table-name').value;
+    const resultEl = document.getElementById('result-count');
+    const contentEl = document.getElementById('result-count-content');
+    try {
+        const response = await fetch('/dotnet/api/demo/db/count?table=' + encodeURIComponent(tableName));
+        const data = await response.json();
+        contentEl.textContent = JSON.stringify(data, null, 2);
+        resultEl.style.display = 'block';
+    } catch (e) {
+        contentEl.textContent = 'エラー: ' + e.message;
+        resultEl.style.display = 'block';
+    }
+}
+</script>
