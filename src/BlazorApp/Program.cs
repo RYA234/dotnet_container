@@ -82,9 +82,12 @@ builder.Services.AddScoped<BlazorApp.Services.IPricingService, BlazorApp.Service
 builder.Services.AddScoped<BlazorApp.Services.IOrderService, BlazorApp.Services.OrderService>();
 builder.Services.AddScoped<ISupabaseService, SupabaseService>();
 
-// Demo database configuration (using raw SQL with SQL Server)
-// Connection string should be set in appsettings.json or environment variables
+// フルスキャンデモ用 SQLite — ContentRootPath で絶対パスに変換
+var fullScanDbPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "full_scan_demo.db");
+builder.Configuration["ConnectionStrings:FullScanDemo"] = $"Data Source={fullScanDbPath};";
+
 builder.Services.AddScoped<INPlusOneService, NPlusOneService>();
+builder.Services.AddScoped<IFullScanService, FullScanService>();
 builder.Services.AddScoped<IValidationDemoService, ValidationDemoService>();
 builder.Services.AddScoped<ILoggingDemoService, LoggingDemoService>();
 
