@@ -82,8 +82,10 @@ builder.Services.AddScoped<BlazorApp.Services.IPricingService, BlazorApp.Service
 builder.Services.AddScoped<BlazorApp.Services.IOrderService, BlazorApp.Services.OrderService>();
 builder.Services.AddScoped<ISupabaseService, SupabaseService>();
 
-// Demo database configuration (using raw SQL with SQL Server)
-// Connection string should be set in appsettings.json or environment variables
+// N+1デモ用 SQLite — ContentRootPath で絶対パスに変換
+var nPlusOneDbPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "n_plus_one_demo.db");
+builder.Configuration["ConnectionStrings:NPlusOneDemo"] = $"Data Source={nPlusOneDbPath};";
+
 builder.Services.AddScoped<INPlusOneService, NPlusOneService>();
 builder.Services.AddScoped<IValidationDemoService, ValidationDemoService>();
 builder.Services.AddScoped<ILoggingDemoService, LoggingDemoService>();
