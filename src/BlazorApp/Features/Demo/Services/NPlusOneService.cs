@@ -19,8 +19,56 @@ public class NPlusOneService : INPlusOneService
 
     private SqliteConnection GetConnection()
     {
-        var connectionString = _configuration.GetConnectionString("DemoDatabase");
+        var connectionString = _configuration.GetConnectionString("NPlusOneDemo");
         return new SqliteConnection(connectionString);
+    }
+
+    private async Task EnsureDatabaseInitializedAsync(SqliteConnection connection)
+    {
+        var createTables = connection.CreateCommand();
+        createTables.CommandText = @"
+            CREATE TABLE IF NOT EXISTS Departments (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL,
+                CreatedAt TEXT DEFAULT (datetime('now'))
+            );
+            CREATE TABLE IF NOT EXISTS Users (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL,
+                DepartmentId INTEGER NOT NULL,
+                Email TEXT NOT NULL,
+                CreatedAt TEXT DEFAULT (datetime('now')),
+                FOREIGN KEY (DepartmentId) REFERENCES Departments(Id)
+            );
+            CREATE INDEX IF NOT EXISTS IX_Users_DepartmentId ON Users(DepartmentId);";
+        await createTables.ExecuteNonQueryAsync();
+
+        var countCmd = connection.CreateCommand();
+        countCmd.CommandText = "SELECT COUNT(*) FROM Departments";
+        var count = Convert.ToInt32(await countCmd.ExecuteScalarAsync());
+        if (count > 0) return;
+
+        var seedDepts = connection.CreateCommand();
+        seedDepts.CommandText = @"
+            INSERT INTO Departments (Name) VALUES
+                ('開発部'), ('営業部'), ('人事部'), ('総務部'), ('マーケティング部');";
+        await seedDepts.ExecuteNonQueryAsync();
+
+        var lastNames = new[] { "田中", "鈴木", "佐藤", "高橋", "伊藤", "渡辺", "山本", "中村", "小林", "加藤",
+                                "吉田", "山田", "佐々木", "山口", "松本", "井上", "木村", "林", "斎藤", "清水" };
+        var firstNames = new[] { "太郎", "花子", "次郎", "美咲", "健一", "恵子", "大輔", "裕子", "隆", "由美" };
+        var values = new System.Text.StringBuilder();
+        for (int i = 1; i <= 100; i++)
+        {
+            var name = lastNames[(i - 1) % lastNames.Length] + firstNames[(i - 1) % firstNames.Length];
+            var deptId = ((i - 1) % 5) + 1;
+            var email = $"user{i:D3}@example.com";
+            if (i > 1) values.Append(',');
+            values.Append($"('{name}', {deptId}, '{email}')");
+        }
+        var seedUsers = connection.CreateCommand();
+        seedUsers.CommandText = $"INSERT INTO Users (Name, DepartmentId, Email) VALUES {values};";
+        await seedUsers.ExecuteNonQueryAsync();
     }
 
     public async Task<NPlusOneResponse> GetUsersBad()
@@ -32,6 +80,7 @@ public class NPlusOneService : INPlusOneService
         using (var connection = GetConnection())
         {
             await connection.OpenAsync();
+            await EnsureDatabaseInitializedAsync(connection);
 
             // N+1問題あり: ユーザーを取得後、ループ内で部署情報を取得
             var usersCommand = connection.CreateCommand();
@@ -105,6 +154,7 @@ public class NPlusOneService : INPlusOneService
         using (var connection = GetConnection())
         {
             await connection.OpenAsync();
+            await EnsureDatabaseInitializedAsync(connection);
 
             // 最適化済み: JOINを使って1回のクエリで全データ取得
             var sql = @"

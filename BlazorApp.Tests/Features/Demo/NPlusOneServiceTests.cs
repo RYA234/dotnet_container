@@ -27,7 +27,7 @@ public class NPlusOneServiceTests : IDisposable
         var configBuilder = new ConfigurationBuilder();
         configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            { "ConnectionStrings:DemoDatabase", _connectionString }
+            { "ConnectionStrings:NPlusOneDemo", _connectionString }
         });
         _configuration = configBuilder.Build();
 
