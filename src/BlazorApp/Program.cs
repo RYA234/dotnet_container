@@ -82,6 +82,10 @@ builder.Services.AddScoped<BlazorApp.Services.IPricingService, BlazorApp.Service
 builder.Services.AddScoped<BlazorApp.Services.IOrderService, BlazorApp.Services.OrderService>();
 builder.Services.AddScoped<ISupabaseService, SupabaseService>();
 
+// N+1デモ用 SQLite — ContentRootPath で絶対パスに変換
+var nPlusOneDbPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "n_plus_one_demo.db");
+builder.Configuration["ConnectionStrings:NPlusOneDemo"] = $"Data Source={nPlusOneDbPath};";
+
 // フルスキャンデモ用 SQLite — ContentRootPath で絶対パスに変換
 var fullScanDbPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "full_scan_demo.db");
 builder.Configuration["ConnectionStrings:FullScanDemo"] = $"Data Source={fullScanDbPath};";
