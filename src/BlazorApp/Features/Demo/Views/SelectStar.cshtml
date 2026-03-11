@@ -1,0 +1,204 @@
+@{
+    ViewData["Title"] = "SELECT * の無駄遣いデモ";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">💸 SELECT * の無駄遣いデモ</h1>
+    <p class="lead">必要なカラムのみ取得することによる転送量削減・コスト最適化を体感できるデモ</p>
+
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h2 class="h4 mb-0">Step 1: セットアップ（1万件データ生成）</h2>
+        </div>
+        <div class="card-body">
+            <p>Profiles テーブルに1万件のダミーデータを生成します。</p>
+            <ul>
+                <li><strong>Bio</strong>: 約10KB（自己紹介文）</li>
+                <li><strong>Preferences</strong>: 約5KB（ユーザー設定JSON）</li>
+                <li><strong>ActivityLog</strong>: 約20KB（アクティビティログ）</li>
+            </ul>
+            <p class="text-muted">1レコードあたり約35KB。画面に表示するのはNameとEmailだけですが…</p>
+            <button class="btn btn-warning" onclick="runSetup(this)">セットアップ実行</button>
+            <div id="result-setup" class="mt-3" style="display: none;">
+                <pre id="result-setup-content" class="bg-light p-3 rounded"></pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-danger text-white">
+                    <h2 class="h4 mb-0">Step 2: SELECT * 実行（NG）</h2>
+                </div>
+                <div class="card-body">
+                    <p>全カラムを取得します。不要な Bio / Preferences / ActivityLog もすべて転送されます。</p>
+                    <code class="d-block bg-light p-2 mb-3">SELECT * FROM Profiles</code>
+                    <button class="btn btn-danger" onclick="runAllColumns(this)">SELECT * 実行</button>
+                    <div id="result-all" class="mt-3" style="display: none;">
+                        <div id="result-all-summary" class="alert alert-danger"></div>
+                        <pre id="result-all-content" class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h2 class="h4 mb-0">Step 3: 必要カラムのみ実行（OK）</h2>
+                </div>
+                <div class="card-body">
+                    <p>必要なカラムだけを取得します。Bio / Preferences / ActivityLog は取得しません。</p>
+                    <code class="d-block bg-light p-2 mb-3">SELECT Id, Name, Email FROM Profiles</code>
+                    <button class="btn btn-success" onclick="runSpecificColumns(this)">必要カラムのみ実行</button>
+                    <div id="result-specific" class="mt-3" style="display: none;">
+                        <div id="result-specific-summary" class="alert alert-success"></div>
+                        <pre id="result-specific-content" class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4" id="comparison-card" style="display: none;">
+        <div class="card-header bg-secondary text-white">
+            <h2 class="h4 mb-0">比較結果</h2>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>メトリクス</th>
+                            <th class="text-danger">SELECT *</th>
+                            <th class="text-success">必要カラムのみ</th>
+                            <th>削減率</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>実行時間</td>
+                            <td id="cmp-all-time">-</td>
+                            <td id="cmp-specific-time">-</td>
+                            <td id="cmp-time-reduction">-</td>
+                        </tr>
+                        <tr>
+                            <td>データサイズ</td>
+                            <td id="cmp-all-size">-</td>
+                            <td id="cmp-specific-size">-</td>
+                            <td id="cmp-size-reduction" class="fw-bold text-success">-</td>
+                        </tr>
+                        <tr>
+                            <td>AWS転送料概算</td>
+                            <td id="cmp-all-cost">-</td>
+                            <td id="cmp-specific-cost">-</td>
+                            <td id="cmp-cost-reduction">-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-muted small">※ AWS Data Transfer: $0.01/GB（教育用簡略値）</p>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a href="~/Demo/Index" class="btn btn-secondary">← デモ一覧に戻る</a>
+    </div>
+</div>
+
+<script>
+let allResult = null;
+let specificResult = null;
+
+async function runSetup(btn) {
+    btn.disabled = true;
+    btn.textContent = '実行中...';
+    try {
+        const response = await fetch('/dotnet/api/demo/select-star/setup', { method: 'POST' });
+        const data = await response.json();
+        document.getElementById('result-setup-content').textContent = JSON.stringify(data, null, 2);
+        document.getElementById('result-setup').style.display = 'block';
+    } catch (error) {
+        document.getElementById('result-setup-content').textContent = 'Error: ' + error.message;
+        document.getElementById('result-setup').style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'セットアップ実行';
+    }
+}
+
+async function runAllColumns(btn) {
+    btn.disabled = true;
+    btn.textContent = '実行中...';
+    try {
+        const response = await fetch('/dotnet/api/demo/select-star/all-columns');
+        const data = await response.json();
+        allResult = data;
+        document.getElementById('result-all-summary').innerHTML =
+            `<strong>実行時間:</strong> ${data.executionTimeMs} ms &nbsp;|&nbsp;
+             <strong>データサイズ:</strong> ${data.dataSizeLabel} &nbsp;|&nbsp;
+             <strong>AWS転送料:</strong> $${data.awsCostEstimate.toFixed(6)}<br>
+             <small>${data.message}</small>`;
+        document.getElementById('result-all-content').textContent = JSON.stringify(data.data, null, 2);
+        document.getElementById('result-all').style.display = 'block';
+        updateComparison();
+    } catch (error) {
+        document.getElementById('result-all-content').textContent = 'Error: ' + error.message;
+        document.getElementById('result-all').style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'SELECT * 実行';
+    }
+}
+
+async function runSpecificColumns(btn) {
+    btn.disabled = true;
+    btn.textContent = '実行中...';
+    try {
+        const response = await fetch('/dotnet/api/demo/select-star/specific-columns');
+        const data = await response.json();
+        specificResult = data;
+        document.getElementById('result-specific-summary').innerHTML =
+            `<strong>実行時間:</strong> ${data.executionTimeMs} ms &nbsp;|&nbsp;
+             <strong>データサイズ:</strong> ${data.dataSizeLabel} &nbsp;|&nbsp;
+             <strong>AWS転送料:</strong> $${data.awsCostEstimate.toFixed(6)}<br>
+             <small>${data.message}</small>`;
+        document.getElementById('result-specific-content').textContent = JSON.stringify(data.data, null, 2);
+        document.getElementById('result-specific').style.display = 'block';
+        updateComparison();
+    } catch (error) {
+        document.getElementById('result-specific-content').textContent = 'Error: ' + error.message;
+        document.getElementById('result-specific').style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '必要カラムのみ実行';
+    }
+}
+
+function updateComparison() {
+    if (!allResult || !specificResult) return;
+
+    document.getElementById('comparison-card').style.display = 'block';
+
+    document.getElementById('cmp-all-time').textContent = allResult.executionTimeMs + ' ms';
+    document.getElementById('cmp-specific-time').textContent = specificResult.executionTimeMs + ' ms';
+    const timeReduction = allResult.executionTimeMs > 0
+        ? Math.round((1 - specificResult.executionTimeMs / allResult.executionTimeMs) * 100)
+        : 0;
+    document.getElementById('cmp-time-reduction').textContent = timeReduction + '% 削減';
+
+    document.getElementById('cmp-all-size').textContent = allResult.dataSizeLabel;
+    document.getElementById('cmp-specific-size').textContent = specificResult.dataSizeLabel;
+    const sizeRatio = allResult.dataSize > 0
+        ? Math.round(allResult.dataSize / specificResult.dataSize)
+        : 0;
+    document.getElementById('cmp-size-reduction').innerHTML = `<span class="text-success">${sizeRatio}倍の差！</span>`;
+
+    document.getElementById('cmp-all-cost').textContent = '$' + allResult.awsCostEstimate.toFixed(6);
+    document.getElementById('cmp-specific-cost').textContent = '$' + specificResult.awsCostEstimate.toFixed(6);
+    const costRatio = specificResult.awsCostEstimate > 0
+        ? Math.round(allResult.awsCostEstimate / specificResult.awsCostEstimate)
+        : 0;
+    document.getElementById('cmp-cost-reduction').textContent = costRatio + '倍のコスト差';
+}
+</script>
