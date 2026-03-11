@@ -38,3 +38,4 @@ playwright-report/
 
 ## SQLite Database Files (generated at runtime)
 src/BlazorApp/Data/full_scan_demo.db
+src/BlazorApp/Data/select_star_demo.db

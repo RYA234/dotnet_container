@@ -43,13 +43,13 @@ public class NPlusOneServiceTests : IDisposable
         // Create tables
         var createCommand = _sharedConnection.CreateCommand();
         createCommand.CommandText = @"
-            CREATE TABLE Departments (
+            CREATE TABLE IF NOT EXISTS Departments (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 Name TEXT NOT NULL,
                 CreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
             );
 
-            CREATE TABLE Users (
+            CREATE TABLE IF NOT EXISTS Users (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 Name TEXT NOT NULL,
                 DepartmentId INTEGER NOT NULL,

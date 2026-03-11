@@ -10,15 +10,17 @@ public class DemoController : Controller
 {
     private readonly INPlusOneService _nPlusOneService;
     private readonly IFullScanService _fullScanService;
+    private readonly ISelectStarService _selectStarService;
     private readonly IValidationDemoService _validationDemoService;
     private readonly ILoggingDemoService _loggingDemoService;
     private readonly IDatabaseConnectionDemoService _dbConnectionDemoService;
     private readonly ILogger<DemoController> _logger;
 
-    public DemoController(INPlusOneService nPlusOneService, IFullScanService fullScanService, IValidationDemoService validationDemoService, ILoggingDemoService loggingDemoService, IDatabaseConnectionDemoService dbConnectionDemoService, ILogger<DemoController> logger)
+    public DemoController(INPlusOneService nPlusOneService, IFullScanService fullScanService, ISelectStarService selectStarService, IValidationDemoService validationDemoService, ILoggingDemoService loggingDemoService, IDatabaseConnectionDemoService dbConnectionDemoService, ILogger<DemoController> logger)
     {
         _nPlusOneService = nPlusOneService;
         _fullScanService = fullScanService;
+        _selectStarService = selectStarService;
         _validationDemoService = validationDemoService;
         _loggingDemoService = loggingDemoService;
         _dbConnectionDemoService = dbConnectionDemoService;
@@ -69,6 +71,11 @@ public class DemoController : Controller
     public IActionResult FullScan()
     {
         return View("~/Features/Demo/Views/FullScan.cshtml");
+    }
+
+    public IActionResult SelectStar()
+    {
+        return View("~/Features/Demo/Views/SelectStar.cshtml");
     }
 
     // API Endpoints
@@ -168,6 +175,55 @@ public class DemoController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in full-scan with-index endpoint");
+            return StatusCode(500, new { error = ex.Message, code = "INTERNAL_ERROR" });
+        }
+    }
+
+    // =============================================
+    // SELECT * デモ用 API エンドポイント
+    // =============================================
+
+    [HttpPost("api/demo/select-star/setup")]
+    public async Task<IActionResult> SelectStarSetup()
+    {
+        try
+        {
+            var result = await _selectStarService.SetupAsync();
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in select-star setup endpoint");
+            return StatusCode(500, new { error = ex.Message, code = "INTERNAL_ERROR" });
+        }
+    }
+
+    [HttpGet("api/demo/select-star/all-columns")]
+    public async Task<IActionResult> SelectStarAllColumns()
+    {
+        try
+        {
+            var result = await _selectStarService.GetAllColumnsAsync();
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in select-star all-columns endpoint");
+            return StatusCode(500, new { error = ex.Message, code = "INTERNAL_ERROR" });
+        }
+    }
+
+    [HttpGet("api/demo/select-star/specific-columns")]
+    public async Task<IActionResult> SelectStarSpecificColumns()
+    {
+        try
+        {
+            var result = await _selectStarService.GetSpecificColumnsAsync();
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in select-star specific-columns endpoint");
             return StatusCode(500, new { error = ex.Message, code = "INTERNAL_ERROR" });
         }
     }
