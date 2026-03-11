@@ -9,14 +9,16 @@ namespace BlazorApp.Features.Demo;
 public class DemoController : Controller
 {
     private readonly INPlusOneService _nPlusOneService;
+    private readonly IFullScanService _fullScanService;
     private readonly IValidationDemoService _validationDemoService;
     private readonly ILoggingDemoService _loggingDemoService;
     private readonly IDatabaseConnectionDemoService _dbConnectionDemoService;
     private readonly ILogger<DemoController> _logger;
 
-    public DemoController(INPlusOneService nPlusOneService, IValidationDemoService validationDemoService, ILoggingDemoService loggingDemoService, IDatabaseConnectionDemoService dbConnectionDemoService, ILogger<DemoController> logger)
+    public DemoController(INPlusOneService nPlusOneService, IFullScanService fullScanService, IValidationDemoService validationDemoService, ILoggingDemoService loggingDemoService, IDatabaseConnectionDemoService dbConnectionDemoService, ILogger<DemoController> logger)
     {
         _nPlusOneService = nPlusOneService;
+        _fullScanService = fullScanService;
         _validationDemoService = validationDemoService;
         _loggingDemoService = loggingDemoService;
         _dbConnectionDemoService = dbConnectionDemoService;
@@ -64,6 +66,11 @@ public class DemoController : Controller
         return View("~/Features/Demo/Views/DatabaseConnection.cshtml");
     }
 
+    public IActionResult FullScan()
+    {
+        return View("~/Features/Demo/Views/FullScan.cshtml");
+    }
+
     // API Endpoints
     [HttpGet("api/demo/n-plus-one/bad")]
     public async Task<IActionResult> NPlusOneBad()
@@ -92,6 +99,76 @@ public class DemoController : Controller
         {
             _logger.LogError(ex, "Error in N+1 good endpoint");
             return StatusCode(500, new { error = ex.Message });
+        }
+    }
+
+    // =============================================
+    // フルテーブルスキャンデモ用 API エンドポイント
+    // =============================================
+
+    [HttpPost("api/demo/full-scan/setup")]
+    public async Task<IActionResult> FullScanSetup()
+    {
+        try
+        {
+            var result = await _fullScanService.SetupAsync();
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in full-scan setup endpoint");
+            return StatusCode(500, new { error = ex.Message, code = "INTERNAL_ERROR" });
+        }
+    }
+
+    [HttpGet("api/demo/full-scan/without-index")]
+    public async Task<IActionResult> FullScanWithoutIndex([FromQuery] string? email)
+    {
+        if (string.IsNullOrEmpty(email))
+            return BadRequest(new { error = "emailパラメータが必要です", code = "MISSING_PARAM" });
+
+        try
+        {
+            var result = await _fullScanService.SearchWithoutIndexAsync(email);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in full-scan without-index endpoint");
+            return StatusCode(500, new { error = ex.Message, code = "INTERNAL_ERROR" });
+        }
+    }
+
+    [HttpPost("api/demo/full-scan/create-index")]
+    public async Task<IActionResult> FullScanCreateIndex()
+    {
+        try
+        {
+            var result = await _fullScanService.CreateIndexAsync();
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in full-scan create-index endpoint");
+            return StatusCode(500, new { error = ex.Message, code = "INTERNAL_ERROR" });
+        }
+    }
+
+    [HttpGet("api/demo/full-scan/with-index")]
+    public async Task<IActionResult> FullScanWithIndex([FromQuery] string? email)
+    {
+        if (string.IsNullOrEmpty(email))
+            return BadRequest(new { error = "emailパラメータが必要です", code = "MISSING_PARAM" });
+
+        try
+        {
+            var result = await _fullScanService.SearchWithIndexAsync(email);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in full-scan with-index endpoint");
+            return StatusCode(500, new { error = ex.Message, code = "INTERNAL_ERROR" });
         }
     }
 

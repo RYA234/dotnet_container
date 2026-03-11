@@ -86,7 +86,12 @@ builder.Services.AddScoped<ISupabaseService, SupabaseService>();
 var nPlusOneDbPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "n_plus_one_demo.db");
 builder.Configuration["ConnectionStrings:NPlusOneDemo"] = $"Data Source={nPlusOneDbPath};";
 
+// フルスキャンデモ用 SQLite — ContentRootPath で絶対パスに変換
+var fullScanDbPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "full_scan_demo.db");
+builder.Configuration["ConnectionStrings:FullScanDemo"] = $"Data Source={fullScanDbPath};";
+
 builder.Services.AddScoped<INPlusOneService, NPlusOneService>();
+builder.Services.AddScoped<IFullScanService, FullScanService>();
 builder.Services.AddScoped<IValidationDemoService, ValidationDemoService>();
 builder.Services.AddScoped<ILoggingDemoService, LoggingDemoService>();
 

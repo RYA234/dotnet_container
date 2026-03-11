@@ -35,3 +35,6 @@ playwright-report/
 ## Environment Variables
 .env
 .env.local
+
+## SQLite Database Files (generated at runtime)
+src/BlazorApp/Data/full_scan_demo.db
