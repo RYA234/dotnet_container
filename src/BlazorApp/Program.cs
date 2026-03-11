@@ -94,9 +94,14 @@ builder.Configuration["ConnectionStrings:FullScanDemo"] = $"Data Source={fullSca
 var selectStarDbPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "select_star_demo.db");
 builder.Configuration["ConnectionStrings:SelectStarDemo"] = $"Data Source={selectStarDbPath};";
 
+// LIKE検索デモ用 SQLite — ContentRootPath で絶対パスに変換
+var likeSearchDbPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "like_search_demo.db");
+builder.Configuration["ConnectionStrings:LikeSearchDemo"] = $"Data Source={likeSearchDbPath};";
+
 builder.Services.AddScoped<INPlusOneService, NPlusOneService>();
 builder.Services.AddScoped<IFullScanService, FullScanService>();
 builder.Services.AddScoped<ISelectStarService, SelectStarService>();
+builder.Services.AddScoped<ILikeSearchService, LikeSearchService>();
 builder.Services.AddScoped<IValidationDemoService, ValidationDemoService>();
 builder.Services.AddScoped<ILoggingDemoService, LoggingDemoService>();
 

@@ -11,16 +11,18 @@ public class DemoController : Controller
     private readonly INPlusOneService _nPlusOneService;
     private readonly IFullScanService _fullScanService;
     private readonly ISelectStarService _selectStarService;
+    private readonly ILikeSearchService _likeSearchService;
     private readonly IValidationDemoService _validationDemoService;
     private readonly ILoggingDemoService _loggingDemoService;
     private readonly IDatabaseConnectionDemoService _dbConnectionDemoService;
     private readonly ILogger<DemoController> _logger;
 
-    public DemoController(INPlusOneService nPlusOneService, IFullScanService fullScanService, ISelectStarService selectStarService, IValidationDemoService validationDemoService, ILoggingDemoService loggingDemoService, IDatabaseConnectionDemoService dbConnectionDemoService, ILogger<DemoController> logger)
+    public DemoController(INPlusOneService nPlusOneService, IFullScanService fullScanService, ISelectStarService selectStarService, ILikeSearchService likeSearchService, IValidationDemoService validationDemoService, ILoggingDemoService loggingDemoService, IDatabaseConnectionDemoService dbConnectionDemoService, ILogger<DemoController> logger)
     {
         _nPlusOneService = nPlusOneService;
         _fullScanService = fullScanService;
         _selectStarService = selectStarService;
+        _likeSearchService = likeSearchService;
         _validationDemoService = validationDemoService;
         _loggingDemoService = loggingDemoService;
         _dbConnectionDemoService = dbConnectionDemoService;
@@ -76,6 +78,11 @@ public class DemoController : Controller
     public IActionResult SelectStar()
     {
         return View("~/Features/Demo/Views/SelectStar.cshtml");
+    }
+
+    public IActionResult LikeSearch()
+    {
+        return View("~/Features/Demo/Views/LikeSearch.cshtml");
     }
 
     // API Endpoints
@@ -175,6 +182,61 @@ public class DemoController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in full-scan with-index endpoint");
+            return StatusCode(500, new { error = ex.Message, code = "INTERNAL_ERROR" });
+        }
+    }
+
+    // =============================================
+    // LIKE検索デモ用 API エンドポイント
+    // =============================================
+
+    [HttpPost("api/demo/like-search/setup")]
+    public async Task<IActionResult> LikeSearchSetup()
+    {
+        try
+        {
+            var result = await _likeSearchService.SetupAsync();
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in like-search setup endpoint");
+            return StatusCode(500, new { error = ex.Message, code = "INTERNAL_ERROR" });
+        }
+    }
+
+    [HttpGet("api/demo/like-search/prefix")]
+    public async Task<IActionResult> LikeSearchPrefix([FromQuery] string? keyword)
+    {
+        if (string.IsNullOrEmpty(keyword))
+            return BadRequest(new { error = "keywordパラメータが必要です", code = "MISSING_PARAM" });
+
+        try
+        {
+            var result = await _likeSearchService.SearchPrefixAsync(keyword);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in like-search prefix endpoint");
+            return StatusCode(500, new { error = ex.Message, code = "INTERNAL_ERROR" });
+        }
+    }
+
+    [HttpGet("api/demo/like-search/partial")]
+    public async Task<IActionResult> LikeSearchPartial([FromQuery] string? keyword)
+    {
+        if (string.IsNullOrEmpty(keyword))
+            return BadRequest(new { error = "keywordパラメータが必要です", code = "MISSING_PARAM" });
+
+        try
+        {
+            var result = await _likeSearchService.SearchPartialAsync(keyword);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in like-search partial endpoint");
             return StatusCode(500, new { error = ex.Message, code = "INTERNAL_ERROR" });
         }
     }

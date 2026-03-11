@@ -1,0 +1,200 @@
+@{
+    ViewData["Title"] = "LIKE検索デモ";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">🔎 LIKE検索デモ</h1>
+    <p class="lead">前方一致（インデックス有効）と中間一致（フルスキャン）のパフォーマンス差を体感できるデモ</p>
+
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h2 class="h4 mb-0">Step 1: セットアップ（10万件データ生成）</h2>
+        </div>
+        <div class="card-body">
+            <p>SearchUsers テーブルに10万件の日本人名ダミーデータを生成します。<code>IX_SearchUsers_Name</code> インデックスも作成します。</p>
+            <button class="btn btn-warning" onclick="runSetup(this)">セットアップ実行</button>
+            <div id="result-setup" class="mt-3" style="display: none;">
+                <pre id="result-setup-content" class="bg-light p-3 rounded"></pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="keywordInput" class="form-label fw-bold">検索キーワード</label>
+        <input type="text" id="keywordInput" class="form-control" value="山" style="max-width: 300px;">
+        <small class="text-muted">日本語の姓の一部を入力してください（例: 山、田、鈴）</small>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h2 class="h4 mb-0">Step 2: 前方一致検索（✅ インデックス使用）</h2>
+                </div>
+                <div class="card-body">
+                    <p>キーワードで始まる名前を検索します。インデックスが使われるため高速です。</p>
+                    <code class="d-block bg-light p-2 mb-3">SELECT ... WHERE Name LIKE '山%'</code>
+                    <button class="btn btn-success" onclick="runPrefix(this)">前方一致検索</button>
+                    <div id="result-prefix" class="mt-3" style="display: none;">
+                        <div id="result-prefix-summary" class="alert alert-success"></div>
+                        <pre id="result-prefix-content" class="bg-light p-3 rounded" style="max-height: 250px; overflow-y: auto;"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-danger text-white">
+                    <h2 class="h4 mb-0">Step 3: 中間一致検索（❌ フルスキャン）</h2>
+                </div>
+                <div class="card-body">
+                    <p>キーワードを含む名前を検索します。インデックスが無効になりフルスキャンになります。</p>
+                    <code class="d-block bg-light p-2 mb-3">SELECT ... WHERE Name LIKE '%山%'</code>
+                    <button class="btn btn-danger" onclick="runPartial(this)">中間一致検索</button>
+                    <div id="result-partial" class="mt-3" style="display: none;">
+                        <div id="result-partial-summary" class="alert alert-danger"></div>
+                        <pre id="result-partial-content" class="bg-light p-3 rounded" style="max-height: 250px; overflow-y: auto;"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4" id="comparison-card" style="display: none;">
+        <div class="card-header bg-secondary text-white">
+            <h2 class="h4 mb-0">比較結果</h2>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>メトリクス</th>
+                            <th class="text-success">前方一致（LIKE 'keyword%'）</th>
+                            <th class="text-danger">中間一致（LIKE '%keyword%'）</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>実行時間</td>
+                            <td id="cmp-prefix-time">-</td>
+                            <td id="cmp-partial-time">-</td>
+                        </tr>
+                        <tr>
+                            <td>件数</td>
+                            <td id="cmp-prefix-count">-</td>
+                            <td id="cmp-partial-count">-</td>
+                        </tr>
+                        <tr>
+                            <td>インデックス</td>
+                            <td id="cmp-prefix-index" class="text-success fw-bold">✅ 使用</td>
+                            <td id="cmp-partial-index" class="text-danger fw-bold">❌ 未使用（フルスキャン）</td>
+                        </tr>
+                        <tr>
+                            <td>速度差</td>
+                            <td colspan="2" id="cmp-speed-diff" class="fw-bold text-center">-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="alert alert-info mt-3">
+                <strong>なぜ中間一致はインデックスが使えないのか？</strong><br>
+                インデックスはB-Treeで先頭文字から順に索引を辿ります。<br>
+                前方一致（<code>山%</code>）は先頭が「山」と確定しているので索引を辿れますが、<br>
+                中間一致（<code>%山%</code>）は先頭が不定のため索引が使えず全件スキャンになります。
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a href="~/Demo/Index" class="btn btn-secondary">← デモ一覧に戻る</a>
+    </div>
+</div>
+
+<script>
+let prefixResult = null;
+let partialResult = null;
+
+async function runSetup(btn) {
+    btn.disabled = true;
+    btn.textContent = '実行中...';
+    try {
+        const response = await fetch('/dotnet/api/demo/like-search/setup', { method: 'POST' });
+        const data = await response.json();
+        document.getElementById('result-setup-content').textContent = JSON.stringify(data, null, 2);
+        document.getElementById('result-setup').style.display = 'block';
+    } catch (error) {
+        document.getElementById('result-setup-content').textContent = 'Error: ' + error.message;
+        document.getElementById('result-setup').style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'セットアップ実行';
+    }
+}
+
+async function runPrefix(btn) {
+    const keyword = document.getElementById('keywordInput').value;
+    btn.disabled = true;
+    btn.textContent = '検索中...';
+    try {
+        const response = await fetch(`/dotnet/api/demo/like-search/prefix?keyword=${encodeURIComponent(keyword)}`);
+        const data = await response.json();
+        prefixResult = data;
+        document.getElementById('result-prefix-summary').innerHTML =
+            `<strong>実行時間:</strong> ${data.executionTimeMs} ms &nbsp;|&nbsp;
+             <strong>件数:</strong> ${data.rowCount.toLocaleString()}件 &nbsp;|&nbsp;
+             <strong>インデックス:</strong> ✅ 使用<br>
+             <small>${data.message}</small>`;
+        document.getElementById('result-prefix-content').textContent = JSON.stringify(data.data, null, 2);
+        document.getElementById('result-prefix').style.display = 'block';
+        updateComparison();
+    } catch (error) {
+        document.getElementById('result-prefix-content').textContent = 'Error: ' + error.message;
+        document.getElementById('result-prefix').style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '前方一致検索';
+    }
+}
+
+async function runPartial(btn) {
+    const keyword = document.getElementById('keywordInput').value;
+    btn.disabled = true;
+    btn.textContent = '検索中...';
+    try {
+        const response = await fetch(`/dotnet/api/demo/like-search/partial?keyword=${encodeURIComponent(keyword)}`);
+        const data = await response.json();
+        partialResult = data;
+        document.getElementById('result-partial-summary').innerHTML =
+            `<strong>実行時間:</strong> ${data.executionTimeMs} ms &nbsp;|&nbsp;
+             <strong>件数:</strong> ${data.rowCount.toLocaleString()}件 &nbsp;|&nbsp;
+             <strong>インデックス:</strong> ❌ 未使用<br>
+             <small>${data.message}</small>`;
+        document.getElementById('result-partial-content').textContent = JSON.stringify(data.data, null, 2);
+        document.getElementById('result-partial').style.display = 'block';
+        updateComparison();
+    } catch (error) {
+        document.getElementById('result-partial-content').textContent = 'Error: ' + error.message;
+        document.getElementById('result-partial').style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '中間一致検索';
+    }
+}
+
+function updateComparison() {
+    if (!prefixResult || !partialResult) return;
+
+    document.getElementById('comparison-card').style.display = 'block';
+    document.getElementById('cmp-prefix-time').textContent = prefixResult.executionTimeMs + ' ms';
+    document.getElementById('cmp-partial-time').textContent = partialResult.executionTimeMs + ' ms';
+    document.getElementById('cmp-prefix-count').textContent = prefixResult.rowCount.toLocaleString() + '件';
+    document.getElementById('cmp-partial-count').textContent = partialResult.rowCount.toLocaleString() + '件';
+
+    if (prefixResult.executionTimeMs > 0) {
+        const ratio = (partialResult.executionTimeMs / prefixResult.executionTimeMs).toFixed(1);
+        document.getElementById('cmp-speed-diff').innerHTML =
+            `中間一致は前方一致の <span class="text-danger">${ratio}倍</span> 遅い`;
+    }
+}
+</script>
