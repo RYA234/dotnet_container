@@ -1,9 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
+using BlazorApp.Features.Demo.Services;
 
-namespace BlazorApp.Features.Demo;
+namespace BlazorApp.Features.Demo.FullScan;
 
-public partial class DemoController
+[Route("Demo")]
+public class FullScanController : Controller
 {
+    private readonly IFullScanService _fullScanService;
+    private readonly ILogger<FullScanController> _logger;
+
+    public FullScanController(IFullScanService fullScanService, ILogger<FullScanController> logger)
+    {
+        _fullScanService = fullScanService;
+        _logger = logger;
+    }
+
+    [Route("FullScan")]
     public IActionResult FullScan()
     {
         return View("~/Features/Demo/FullScan/Views/FullScan.cshtml");

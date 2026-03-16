@@ -1,9 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
+using BlazorApp.Features.Demo.Services;
 
-namespace BlazorApp.Features.Demo;
+namespace BlazorApp.Features.Demo.DatabaseConnection;
 
-public partial class DemoController
+[Route("Demo")]
+public class DatabaseConnectionController : Controller
 {
+    private readonly IDatabaseConnectionDemoService _dbConnectionDemoService;
+    private readonly ILogger<DatabaseConnectionController> _logger;
+
+    public DatabaseConnectionController(IDatabaseConnectionDemoService dbConnectionDemoService, ILogger<DatabaseConnectionController> logger)
+    {
+        _dbConnectionDemoService = dbConnectionDemoService;
+        _logger = logger;
+    }
+
+    [Route("DatabaseConnection")]
     public IActionResult DatabaseConnection()
     {
         return View("~/Features/Demo/DatabaseConnection/Views/DatabaseConnection.cshtml");

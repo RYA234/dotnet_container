@@ -1,9 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
+using BlazorApp.Features.Demo.Services;
 
-namespace BlazorApp.Features.Demo;
+namespace BlazorApp.Features.Demo.SelectStar;
 
-public partial class DemoController
+[Route("Demo")]
+public class SelectStarController : Controller
 {
+    private readonly ISelectStarService _selectStarService;
+    private readonly ILogger<SelectStarController> _logger;
+
+    public SelectStarController(ISelectStarService selectStarService, ILogger<SelectStarController> logger)
+    {
+        _selectStarService = selectStarService;
+        _logger = logger;
+    }
+
+    [Route("SelectStar")]
     public IActionResult SelectStar()
     {
         return View("~/Features/Demo/SelectStar/Views/SelectStar.cshtml");

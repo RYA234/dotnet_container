@@ -2,10 +2,12 @@ using Microsoft.AspNetCore.Mvc;
 using BlazorApp.Shared.DTOs;
 using BlazorApp.Shared.Exceptions;
 
-namespace BlazorApp.Features.Demo;
+namespace BlazorApp.Features.Demo.ErrorHandling;
 
-public partial class DemoController
+[Route("Demo")]
+public class ErrorHandlingController : Controller
 {
+    [Route("ErrorHandling")]
     public IActionResult ErrorHandling()
     {
         return View("~/Features/Demo/ErrorHandling/Views/ErrorHandling.cshtml");

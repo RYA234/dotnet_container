@@ -4,10 +4,19 @@ using BlazorApp.Features.Demo.Services;
 using BlazorApp.Shared.DTOs;
 using BlazorApp.Shared.Exceptions;
 
-namespace BlazorApp.Features.Demo;
+namespace BlazorApp.Features.Demo.Validation;
 
-public partial class DemoController
+[Route("Demo")]
+public class ValidationController : Controller
 {
+    private readonly IValidationDemoService _validationDemoService;
+
+    public ValidationController(IValidationDemoService validationDemoService)
+    {
+        _validationDemoService = validationDemoService;
+    }
+
+    [Route("Validation")]
     public IActionResult Validation()
     {
         return View("~/Features/Demo/Validation/Views/Validation.cshtml");

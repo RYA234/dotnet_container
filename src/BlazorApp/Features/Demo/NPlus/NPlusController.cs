@@ -1,9 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
+using BlazorApp.Features.Demo.Services;
 
-namespace BlazorApp.Features.Demo;
+namespace BlazorApp.Features.Demo.NPlus;
 
-public partial class DemoController
+[Route("Demo")]
+public class NPlusController : Controller
 {
+    private readonly INPlusOneService _nPlusOneService;
+    private readonly ILogger<NPlusController> _logger;
+
+    public NPlusController(INPlusOneService nPlusOneService, ILogger<NPlusController> logger)
+    {
+        _nPlusOneService = nPlusOneService;
+        _logger = logger;
+    }
+
+    [Route("Performance")]
     public IActionResult Performance()
     {
         return View("~/Features/Demo/NPlus/Views/Performance.cshtml");

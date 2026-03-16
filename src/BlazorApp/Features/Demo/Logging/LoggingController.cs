@@ -1,13 +1,22 @@
 using Microsoft.AspNetCore.Mvc;
 using BlazorApp.Features.Demo.Services;
 
-namespace BlazorApp.Features.Demo;
+namespace BlazorApp.Features.Demo.Logging;
 
 /// <summary>マスキングデモ用リクエスト</summary>
 public record MaskRequest(string Input);
 
-public partial class DemoController
+[Route("Demo")]
+public class LoggingController : Controller
 {
+    private readonly ILoggingDemoService _loggingDemoService;
+
+    public LoggingController(ILoggingDemoService loggingDemoService)
+    {
+        _loggingDemoService = loggingDemoService;
+    }
+
+    [Route("Logging")]
     public IActionResult Logging()
     {
         return View("~/Features/Demo/Logging/Views/Logging.cshtml");

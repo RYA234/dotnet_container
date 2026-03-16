@@ -1,9 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
+using BlazorApp.Features.Demo.Services;
 
-namespace BlazorApp.Features.Demo;
+namespace BlazorApp.Features.Demo.LikeSearch;
 
-public partial class DemoController
+[Route("Demo")]
+public class LikeSearchController : Controller
 {
+    private readonly ILikeSearchService _likeSearchService;
+    private readonly ILogger<LikeSearchController> _logger;
+
+    public LikeSearchController(ILikeSearchService likeSearchService, ILogger<LikeSearchController> logger)
+    {
+        _likeSearchService = likeSearchService;
+        _logger = logger;
+    }
+
+    [Route("LikeSearch")]
     public IActionResult LikeSearch()
     {
         return View("~/Features/Demo/LikeSearch/Views/LikeSearch.cshtml");

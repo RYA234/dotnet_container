@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace BlazorApp.Features.Demo;
+namespace BlazorApp.Features.Demo.DataStructures;
 
-public partial class DemoController
+[Route("Demo")]
+public class DataStructuresController : Controller
 {
+    [Route("DataStructures")]
     public IActionResult DataStructures()
     {
         return View("~/Features/Demo/DataStructures/Views/DataStructures.cshtml");

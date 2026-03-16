@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace BlazorApp.Features.Demo;
+namespace BlazorApp.Features.Demo.Security;
 
-public partial class DemoController
+[Route("Demo")]
+public class SecurityController : Controller
 {
+    [Route("Security")]
     public IActionResult Security()
     {
         return View("~/Features/Demo/Security/Views/Security.cshtml");
