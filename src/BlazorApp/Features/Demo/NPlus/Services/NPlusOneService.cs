@@ -51,7 +51,7 @@ public class NPlusOneService : INPlusOneService
         var seedDepts = connection.CreateCommand();
         seedDepts.CommandText = @"
             INSERT INTO Departments (Name) VALUES
-                ('開発部'), ('営業部'), ('人事部'), ('総務部'), ('マーケティング部');";
+                ('Engineering'), ('Sales'), ('Marketing'), ('HR'), ('Finance');";
         await seedDepts.ExecuteNonQueryAsync();
 
         var lastNames = new[] { "田中", "鈴木", "佐藤", "高橋", "伊藤", "渡辺", "山本", "中村", "小林", "加藤",
