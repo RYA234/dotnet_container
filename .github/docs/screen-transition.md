@@ -11,14 +11,19 @@ graph TD
 
     Home --> Education[エンジニア教育用]
     Home --> CoreSystem[基幹システム]
-    Home --> Migration[WinFormsからのマイグレーション]
+    Home --> Pattern[デザインパターン]
+    Home --> Testing[テスト技法]
+    Home --> DDD[ドメイン駆動設計]
+    Home --> TableDesign[テーブル設計]
 
     subgraph "🎓 エンジニア教育用"
         Education --> DemoPerf[SQLパフォーマンス<br/>/dotnet/Demo/Performance]
         Education --> DemoError[エラーハンドリング<br/>/dotnet/Demo/ErrorHandling]
-        Education ---> DemoData[デザインパターン<br/>ドメイン駆動設計<br/>/dotnet/Demo/DataStructures]
-        Education ---> DemoSecurity[セキュリティ<br/>/dotnet/Demo/Security]
-
+        Education --> DemoLog[ログ<br/>/dotnet/Demo/Logging]
+        Education --> DemoVal[バリデーション<br/>/dotnet/Demo/Validation]
+        Education --> DemoData[データ構造<br/>/dotnet/Demo/DataStructures]
+        Education --> DemoSecurity[セキュリティ<br/>/dotnet/Demo/Security]
+        Education --> DemoDB[DB接続<br/>/dotnet/Demo/DatabaseConnection]
     end
 
     subgraph "🏢 基幹システム"
@@ -27,22 +32,42 @@ graph TD
         CoreSystem --> Production[生産管理<br/>/dotnet/Production/Index]
     end
 
-    subgraph "🖥️ WinFormsからのマイグレーション"
-        Migration --> Calculator[電卓画面<br/>/dotnet/Calculator/Index]
+    subgraph "🎨 デザインパターン"
+        Pattern --> Singleton[Singleton<br/>/dotnet/Demo/DesignPattern/Singleton]
+        Pattern --> Factory[Factory Method]
+        Pattern --> Repository[Repository]
+        Pattern --> Strategy[Strategy]
+    end
+
+    subgraph "🧪 テスト技法"
+        Testing --> Equiv[同値分割]
+        Testing --> Boundary[境界値分析]
+        Testing --> Decision[デシジョンテーブル]
+        Testing --> State[状態遷移テスト]
+    end
+
+    subgraph "🏗️ ドメイン駆動設計"
+        DDD --> Entity[エンティティ]
+        DDD --> ValueObj[値オブジェクト]
+        DDD --> Aggregate[集約・リポジトリ]
+    end
+
+    subgraph "🗄️ テーブル設計"
+        TableDesign --> Norm[正規化]
+        TableDesign --> ER[ER図の読み方]
+        TableDesign --> Index[インデックス設計]
     end
 
     style Home fill:#e1f5ff
     style Education fill:#ffe1e1,stroke:#ff4444,stroke-width:3px
     style CoreSystem fill:#e1ffe1,stroke:#44ff44,stroke-width:3px
-    style Migration fill:#fff4e1,stroke:#ffaa44,stroke-width:3px
-    style DemoPerf fill:#ffeeee
-    style DemoError fill:#fff0f0
-    style DemoData fill:#ffe8e8
-    style DemoSecurity fill:#ffe0e0
+    style Pattern fill:#e8e1ff,stroke:#7744ff,stroke-width:3px
+    style Testing fill:#fff0e1,stroke:#ff8844,stroke-width:3px
+    style DDD fill:#e1f0ff,stroke:#4488ff,stroke-width:3px
+    style TableDesign fill:#e1ffee,stroke:#44bb88,stroke-width:3px
     style Inventory fill:#e8ffe8,stroke:#00aa00,stroke-width:2px,stroke-dasharray: 5 5
     style Sales fill:#f0fff0,stroke:#00aa00,stroke-dasharray: 5 5
     style Production fill:#f8fff8,stroke:#00aa00,stroke-dasharray: 5 5
-    style Calculator fill:#ffffee
 ```
 
 ---
@@ -53,13 +78,13 @@ graph TD
 
 ### 機能
 - アプリケーションのエントリーポイント
-- 3つの大分類へのナビゲーション提供
+- 全セクションへのナビゲーション提供
 
 ### 表示内容
 - アプリケーション紹介
 - エンジニア教育用デモへのリンク
 - 基幹システムへのリンク
-- WinFormsマイグレーション機能へのリンク
+- デザインパターン・テスト技法・DDD・テーブル設計へのリンク
 
 ---
 
@@ -75,11 +100,14 @@ graph TD
 - データ構造とアルゴリズムの基礎理解
 - セキュリティの脆弱性と対策の体験
 
-### 実装予定順序
-1. **SQLパフォーマンス** ✅ 実装済み
-2. **エラーハンドリング** ← 次に実装
-3. **セキュリティ**
-4. **データ構造とアルゴリズム**
+### 実装状況
+- ✅ SQLパフォーマンス（N+1, フルスキャン, SELECT *, LIKE検索）
+- ✅ エラーハンドリング
+- ✅ ログ
+- ✅ バリデーション
+- 🚧 セキュリティ
+- 🚧 DB接続
+- 🚧 データ構造とアルゴリズム
 
 ---
 
@@ -113,7 +141,7 @@ N+1問題のデモと最適化手法の比較
 ### 2️⃣ エラーハンドリング
 
 **パス**: `/dotnet/Demo/ErrorHandling`
-**ステータス**: 🚧 未実装（次に実装予定）
+**ステータス**: ✅ 実装済み
 
 #### 機能
 例外処理のベストプラクティスデモ
@@ -228,37 +256,56 @@ OWASP Top 10に基づく脆弱性デモ
 
 ---
 
-## 🖥️ WinFormsからのマイグレーション
+## 🎨 デザインパターン編
 
-### 目的
-- レガシーWinFormsアプリケーションのWeb化
-- クラウド移行
-- 操作性の維持とモダン化
+**ステータス**: 🚧 全項目未実装
 
----
-
-### 1️⃣ 電卓画面
-
-**パス**: `/dotnet/Calculator/Index`
-**ステータス**: ✅ 実装済み
-
-#### 機能
-四則演算を行うシンプルな電卓
-
-#### 操作フロー
-1. 数値 a, b を入力
-2. 演算子を選択 (+, -, *, /)
-3. 「=」ボタンクリック
-4. POST `/dotnet/Calculator/Calculate`
-5. 結果表示
-
-#### マイグレーション内容
-- WinForms Form → Razor View
-- イベントハンドラー → MVC Controller Action
-- クライアントロジック → サーバーサイド処理
+| 画面 | パス |
+|-----|------|
+| Singleton | /dotnet/Demo/DesignPattern/Singleton |
+| Factory Method | /dotnet/Demo/DesignPattern/FactoryMethod |
+| Repository | /dotnet/Demo/DesignPattern/Repository |
+| Strategy | /dotnet/Demo/DesignPattern/Strategy |
+| Observer | /dotnet/Demo/DesignPattern/Observer |
+| Decorator | /dotnet/Demo/DesignPattern/Decorator |
+| Command | /dotnet/Demo/DesignPattern/Command |
 
 ---
 
+## 🧪 テスト技法編
+
+**ステータス**: 🚧 全項目未実装
+
+| 画面 | パス |
+|-----|------|
+| 同値分割 | /dotnet/Demo/TestingTechniques/EquivalencePartitioning |
+| 境界値分析 | /dotnet/Demo/TestingTechniques/BoundaryValue |
+| デシジョンテーブル | /dotnet/Demo/TestingTechniques/DecisionTable |
+| 状態遷移テスト | /dotnet/Demo/TestingTechniques/StateTransition |
+
+---
+
+## 🏗️ ドメイン駆動設計編
+
+**ステータス**: 🚧 全項目未実装
+
+| 画面 | パス |
+|-----|------|
+| エンティティ | /dotnet/Demo/DDD/Entity |
+| 値オブジェクト | /dotnet/Demo/DDD/ValueObject |
+| 集約・リポジトリ | /dotnet/Demo/DDD/Aggregate |
+
+---
+
+## 🗄️ テーブル設計編
+
+**ステータス**: 🚧 全項目未実装
+
+| 画面 | パス |
+|-----|------|
+| 正規化 | /dotnet/Demo/TableDesign/Normalization |
+| ER図の読み方 | /dotnet/Demo/TableDesign/ERDiagram |
+| インデックス設計 | /dotnet/Demo/TableDesign/Index |
 
 ---
 
