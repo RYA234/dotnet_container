@@ -22,14 +22,36 @@
 | No | 画面ID | 画面名 | パス | ステータス |
 |----|--------|--------|------|----------|
 | 01 | HOME | ホーム画面 | /dotnet/ | ✅ |
-| 02 | DEMO_PERF | SQLパフォーマンス | /dotnet/Demo/Performance | ✅ |
-| 03 | DEMO_ERROR | エラーハンドリング | /dotnet/Demo/ErrorHandling | 🚧 |
-| 04 | DEMO_SEC | セキュリティ | /dotnet/Demo/Security | 🚧 |
-| 05 | DEMO_DATA | データ構造 | /dotnet/Demo/DataStructures | 🚧 |
-| 06 | INV | 在庫管理 | /dotnet/Inventory/Index | 🚧 |
-| 07 | SALES | 販売管理 | /dotnet/Sales/Index | 🚧 |
-| 08 | PROD | 生産管理 | /dotnet/Production/Index | 🚧 |
-| 09 | CALC | 電卓 | /dotnet/Calculator/Index | ✅ |
+| 02 | DEMO_PERF | SQLパフォーマンス（N+1） | /dotnet/Demo/Performance | ✅ |
+| 03 | DEMO_FULLSCAN | フルテーブルスキャン | /dotnet/Demo/FullScan | ✅ |
+| 04 | DEMO_SELECT | SELECT * の無駄遣い | /dotnet/Demo/SelectStar | ✅ |
+| 05 | DEMO_LIKE | LIKE中間一致検索 | /dotnet/Demo/LikeSearch | ✅ |
+| 06 | DEMO_ERROR | エラーハンドリング | /dotnet/Demo/ErrorHandling | ✅ |
+| 07 | DEMO_LOG | ログ | /dotnet/Demo/Logging | ✅ |
+| 08 | DEMO_VAL | バリデーション | /dotnet/Demo/Validation | ✅ |
+| 09 | DEMO_SEC | セキュリティ | /dotnet/Demo/Security | 🚧 |
+| 10 | DEMO_DB | DB接続 | /dotnet/Demo/DatabaseConnection | 🚧 |
+| 11 | DEMO_DATA | データ構造とアルゴリズム | /dotnet/Demo/DataStructures | 🚧 |
+| 12 | INV | 在庫管理 | /dotnet/Inventory/Index | 🚧 |
+| 13 | SALES | 販売管理 | /dotnet/Sales/Index | 🚧 |
+| 14 | PROD | 生産管理 | /dotnet/Production/Index | 🚧 |
+| 15 | DP_SINGLETON | Singleton | /dotnet/Demo/DesignPattern/Singleton | 🚧 |
+| 16 | DP_FACTORY | Factory Method | /dotnet/Demo/DesignPattern/FactoryMethod | 🚧 |
+| 17 | DP_REPO | Repository | /dotnet/Demo/DesignPattern/Repository | 🚧 |
+| 18 | DP_STRATEGY | Strategy | /dotnet/Demo/DesignPattern/Strategy | 🚧 |
+| 19 | DP_OBSERVER | Observer | /dotnet/Demo/DesignPattern/Observer | 🚧 |
+| 20 | DP_DECORATOR | Decorator | /dotnet/Demo/DesignPattern/Decorator | 🚧 |
+| 21 | DP_COMMAND | Command | /dotnet/Demo/DesignPattern/Command | 🚧 |
+| 22 | TT_EQUIV | 同値分割 | /dotnet/Demo/TestingTechniques/EquivalencePartitioning | 🚧 |
+| 23 | TT_BOUND | 境界値分析 | /dotnet/Demo/TestingTechniques/BoundaryValue | 🚧 |
+| 24 | TT_DECISION | デシジョンテーブル | /dotnet/Demo/TestingTechniques/DecisionTable | 🚧 |
+| 25 | TT_STATE | 状態遷移テスト | /dotnet/Demo/TestingTechniques/StateTransition | 🚧 |
+| 26 | DDD_ENTITY | エンティティ | /dotnet/Demo/DDD/Entity | 🚧 |
+| 27 | DDD_VALUE | 値オブジェクト | /dotnet/Demo/DDD/ValueObject | 🚧 |
+| 28 | DDD_AGGREGATE | 集約・リポジトリ | /dotnet/Demo/DDD/Aggregate | 🚧 |
+| 29 | TD_NORM | 正規化 | /dotnet/Demo/TableDesign/Normalization | 🚧 |
+| 30 | TD_ER | ER図の読み方 | /dotnet/Demo/TableDesign/ERDiagram | 🚧 |
+| 31 | TD_INDEX | インデックス設計 | /dotnet/Demo/TableDesign/Index | 🚧 |
 
 ### 1.2 画面レイアウト
 

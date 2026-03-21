@@ -1,154 +1,171 @@
 @{
     ViewData["Title"] = "ホーム";
+    Layout = null;
 }
 
-<div class="container mt-4">
-    <h1 class="mb-4">🏠 ASP.NET Core MVC アプリケーション</h1>
-    <p class="lead">このアプリケーションは3つの大分類で構成されています</p>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>.NET Container</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    <div class="row mt-5">
-        <!-- エンジニア教育用 -->
-        <div class="col-md-4 mb-4">
-            <div class="card h-100 border-danger">
-                <div class="card-header bg-danger text-white">
-                    <h2 class="h4 mb-0">🎓 エンジニア教育用</h2>
-                </div>
-                <div class="card-body">
-                    <p class="card-text">将来教育担当になったときに使える実践的なデモ集</p>
-                    <ul class="list-unstyled">
-                        <li class="mb-1">
-                            <small class="text-muted fw-bold">⚡ SQLパフォーマンス</small>
-                        </li>
-                        <li class="mb-2 ps-2">
-                            <a href="~/Demo/Performance" class="btn btn-outline-danger btn-sm w-100 text-start">
-                                ✅ N+1問題
-                            </a>
-                        </li>
-                        <li class="mb-2 ps-2">
-                            <a href="~/Demo/FullScan" class="btn btn-outline-danger btn-sm w-100 text-start">
-                                ✅ フルテーブルスキャン
-                            </a>
-                        </li>
-                        <li class="mb-2 ps-2">
-                            <a href="~/Demo/SelectStar" class="btn btn-outline-danger btn-sm w-100 text-start">
-                                ✅ SELECT * の無駄遣い
-                            </a>
-                        </li>
-                        <li class="mb-2 ps-2">
-                            <a href="~/Demo/LikeSearch" class="btn btn-outline-danger btn-sm w-100 text-start">
-                                ✅ LIKE中間一致検索
-                            </a>
-                        </li>
-                        <li class="mb-2">
-                            <a href="~/Demo/DataStructures" class="btn btn-outline-secondary btn-sm w-100 text-start">
-                                🚧 データ構造とアルゴリズム
-                            </a>
-                        </li>
-                        <li class="mt-3 mb-1">
-                            <small class="text-muted fw-bold">📋 共通設計</small>
-                        </li>
-                        <li class="mb-2 ps-2">
-                            <a href="~/Demo/ErrorHandling" class="btn btn-outline-secondary btn-sm w-100 text-start">
-                                ✅ エラーハンドリング
-                            </a>
-                        </li>
-                        <li class="mb-2 ps-2">
-                            <a href="~/Demo/Security" class="btn btn-outline-secondary btn-sm w-100 text-start">
-                                🚧 セキュリティ
-                            </a>
-                        </li>
-                        <li class="mb-2 ps-2">
-                            <a href="~/Demo/Logging" class="btn btn-outline-secondary btn-sm w-100 text-start">
-                                ✅ ログ
-                            </a>
-                        </li>
-                        <li class="mb-2 ps-2">
-                            <a href="~/Demo/Validation" class="btn btn-outline-secondary btn-sm w-100 text-start">
-                                ✅ バリデーション
-                            </a>
-                        </li>
-                        <li class="mb-2 ps-2">
-                            <a href="~/Demo/DatabaseConnection" class="btn btn-outline-secondary btn-sm w-100 text-start">
-                                🚧 DB接続
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
 
-        <!-- 基幹システム -->
-        <div class="col-md-4 mb-4">
-            <div class="card h-100 border-success">
-                <div class="card-header bg-success text-white">
-                    <h2 class="h4 mb-0">🏢 基幹システム</h2>
-                </div>
-                <div class="card-body">
-                    <p class="card-text">業務システムの基本機能</p>
-                    <ul class="list-unstyled">
-                        <li class="mb-2">
-                            <a href="~/Inventory/Index" class="btn btn-outline-secondary btn-sm w-100 text-start">
-                                🚧 在庫管理
-                            </a>
-                        </li>
-                        <li class="mb-2">
-                            <a href="~/Sales/Index" class="btn btn-outline-secondary btn-sm w-100 text-start">
-                                🚧 販売管理
-                            </a>
-                        </li>
-                        <li class="mb-2">
-                            <a href="~/Production/Index" class="btn btn-outline-secondary btn-sm w-100 text-start">
-                                🚧 生産管理
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 40px;
+    }
 
-        <!-- WinFormsからのマイグレーション -->
-        <div class="col-md-4 mb-4">
-            <div class="card h-100 border-warning">
-                <div class="card-header bg-warning text-dark">
-                    <h2 class="h4 mb-0">🖥️ WinFormsマイグレーション</h2>
-                </div>
-                <div class="card-body">
-                    <p class="card-text">レガシーアプリケーションのWeb化</p>
-                    <ul class="list-unstyled">
-                        <li class="mb-2">
-                            <a href="~/Calculator/Index" class="btn btn-outline-warning btn-sm w-100 text-start">
-                                ✅ 電卓画面
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+    h1 { color: #667eea; font-size: 2.5rem; margin-bottom: 8px; }
+    .subtitle { color: #666; margin-bottom: 30px; font-size: 1.1rem; }
+
+    .tech-stack { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 30px; }
+    .tech-tag {
+      background: #667eea; color: white;
+      padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 500;
+    }
+
+    .section-title {
+      font-size: 1.3rem; font-weight: 700; margin: 30px 0 12px;
+      border-bottom: 2px solid #667eea; padding-bottom: 6px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .feature-item a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: #f7f7f7;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #333;
+      transition: all 0.2s ease;
+      border-left: 4px solid #667eea;
+      font-size: 0.9rem;
+    }
+
+    .feature-item a:hover { background: #667eea; color: white; transform: translateX(4px); }
+    .feature-item a.todo { border-left-color: #ccc; color: #333; }
+    .feature-item a.todo:hover { background: #f0f0f0; color: #999; transform: none; }
+
+    .badge {
+      font-size: 0.7rem; padding: 2px 7px; border-radius: 10px;
+      font-weight: 600; white-space: nowrap; margin-left: auto;
+    }
+    .badge.level-初級 { background: #d4edda; color: #155724; }
+    .badge.level-中級 { background: #fff3cd; color: #856404; }
+    .badge.level-上級 { background: #f8d7da; color: #721c24; }
+
+    .legend { font-size: 0.8rem; color: #999; margin-top: 8px; }
+
+    footer {
+      margin-top: 30px; padding-top: 20px;
+      border-top: 1px solid #ddd; text-align: center; color: #666; font-size: 0.9rem;
+    }
+    footer a { color: #667eea; text-decoration: none; margin: 0 10px; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>.NET Container</h1>
+    <p class="subtitle">Feature-based ASP.NET Core MVC Application on AWS ECS</p>
+
+    <div class="tech-stack">
+      <span class="tech-tag">C#</span>
+      <span class="tech-tag">ASP.NET Core</span>
+      <span class="tech-tag">AWS ECS Fargate</span>
+      <span class="tech-tag">xUnit</span>
+      <span class="tech-tag">Supabase</span>
+      <span class="tech-tag">Docker</span>
     </div>
 
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="h5 mb-0">🔧 システム情報</h3>
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled mb-0">
-                        <li><a href="/dotnet/healthz" target="_blank">ヘルスチェック</a> - システム稼働状況</li>
-                        <li><a href="/dotnet/supabase/test" target="_blank">Supabase接続テスト</a> - データベース接続確認</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+    <div class="section-title">📊 デモ編（SQLパフォーマンス）</div>
+    <div class="grid">
+      <div class="feature-item"><a href="~/Demo/Performance"><span>✅</span> N+1問題 <span class="badge level-初級">初級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/FullScan"><span>✅</span> フルテーブルスキャン <span class="badge level-初級">初級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/SelectStar"><span>✅</span> SELECT * の無駄遣い <span class="badge level-初級">初級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/LikeSearch"><span>✅</span> LIKE中間一致検索 <span class="badge level-初級">初級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/DataStructures" class="todo"><span>❌</span> データ構造とアルゴリズム <span class="badge level-中級">中級</span></a></div>
     </div>
-</div>
 
-<style>
-    .card {
-        transition: transform 0.2s;
-    }
-    .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-</style>
+    <div class="section-title">🔧 共通設計デモ</div>
+    <div class="grid">
+      <div class="feature-item"><a href="~/Demo/ErrorHandling"><span>✅</span> エラーハンドリング <span class="badge level-初級">初級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/Logging"><span>✅</span> ログ <span class="badge level-初級">初級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/Validation"><span>✅</span> バリデーション <span class="badge level-初級">初級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/Security" class="todo"><span>❌</span> セキュリティ <span class="badge level-中級">中級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/DatabaseConnection" class="todo"><span>❌</span> DB接続 <span class="badge level-中級">中級</span></a></div>
+    </div>
+
+    <div class="section-title">🏢 基幹システム編</div>
+    <div class="grid">
+      <div class="feature-item"><a href="~/Inventory/Index" class="todo"><span>❌</span> 在庫管理 <span class="badge level-中級">中級</span></a></div>
+      <div class="feature-item"><a href="~/Sales/Index" class="todo"><span>❌</span> 販売管理 <span class="badge level-中級">中級</span></a></div>
+      <div class="feature-item"><a href="~/Production/Index" class="todo"><span>❌</span> 生産管理 <span class="badge level-中級">中級</span></a></div>
+    </div>
+
+    <div class="section-title">🎨 デザインパターン編</div>
+    <div class="grid">
+      <div class="feature-item"><a href="~/Demo/DesignPattern/Singleton" class="todo"><span>❌</span> Singleton <span class="badge level-初級">初級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/DesignPattern/FactoryMethod" class="todo"><span>❌</span> Factory Method <span class="badge level-初級">初級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/DesignPattern/Repository" class="todo"><span>❌</span> Repository <span class="badge level-中級">中級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/DesignPattern/Strategy" class="todo"><span>❌</span> Strategy <span class="badge level-中級">中級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/DesignPattern/Observer" class="todo"><span>❌</span> Observer <span class="badge level-中級">中級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/DesignPattern/Decorator" class="todo"><span>❌</span> Decorator <span class="badge level-中級">中級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/DesignPattern/Command" class="todo"><span>❌</span> Command <span class="badge level-中級">中級</span></a></div>
+    </div>
+
+    <div class="section-title">🧪 テスト技法編</div>
+    <div class="grid">
+      <div class="feature-item"><a href="~/Demo/TestingTechniques/EquivalencePartitioning" class="todo"><span>❌</span> 同値分割 <span class="badge level-初級">初級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/TestingTechniques/BoundaryValue" class="todo"><span>❌</span> 境界値分析 <span class="badge level-初級">初級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/TestingTechniques/DecisionTable" class="todo"><span>❌</span> デシジョンテーブル <span class="badge level-中級">中級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/TestingTechniques/StateTransition" class="todo"><span>❌</span> 状態遷移テスト <span class="badge level-中級">中級</span></a></div>
+    </div>
+
+    <div class="section-title">🏗️ ドメイン駆動設計編</div>
+    <div class="grid">
+      <div class="feature-item"><a href="~/Demo/DDD/Entity" class="todo"><span>❌</span> エンティティ <span class="badge level-中級">中級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/DDD/ValueObject" class="todo"><span>❌</span> 値オブジェクト <span class="badge level-中級">中級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/DDD/Aggregate" class="todo"><span>❌</span> 集約・リポジトリ <span class="badge level-上級">上級</span></a></div>
+    </div>
+
+    <div class="section-title">🗄️ テーブル設計編</div>
+    <div class="grid">
+      <div class="feature-item"><a href="~/Demo/TableDesign/Normalization" class="todo"><span>❌</span> 正規化 <span class="badge level-初級">初級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/TableDesign/ERDiagram" class="todo"><span>❌</span> ER図の読み方 <span class="badge level-初級">初級</span></a></div>
+      <div class="feature-item"><a href="~/Demo/TableDesign/Index" class="todo"><span>❌</span> インデックス設計 <span class="badge level-中級">中級</span></a></div>
+    </div>
+
+    <p class="legend">凡例: ✅ 実装済み　❌ 未実装</p>
+
+    <footer>
+      <p>Architecture: Feature-based | Pattern: MVC</p>
+      <a href="https://github.com/RYA234/dotnet_container" target="_blank">GitHub</a>
+      <a href="/dotnet/healthz">Health Check</a>
+    </footer>
+  </div>
+</body>
+</html>

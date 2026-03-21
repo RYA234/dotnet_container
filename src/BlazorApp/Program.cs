@@ -122,6 +122,8 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 // Configure path base for /dotnet routing
 app.UsePathBase("/dotnet");
 
+app.UseStatusCodePagesWithReExecute("/Error/{0}");
+
 app.UseStaticFiles();
 app.UseRouting();
 
