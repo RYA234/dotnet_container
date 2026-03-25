@@ -49,6 +49,15 @@ public class ErrorHandlingDemoTests : PageTest
         await Page.WaitForTimeoutAsync(waitMs);
     }
 
+    private async Task AssertErrorResponseAsync(string expectedStatus, string expectedCode)
+    {
+        var status = await Page.Locator("#result-status").TextContentAsync();
+        Assert.That(status?.Trim(), Is.EqualTo(expectedStatus), $"HTTP status が {expectedStatus} であること");
+
+        var content = await Page.Locator("#result-content").TextContentAsync();
+        Assert.That(content, Does.Contain(expectedCode), $"レスポンスに '{expectedCode}' が含まれること");
+    }
+
     private async Task HighlightAndClickAsync(string selector)
     {
         await Page.EvaluateAsync(@"(selector) => {
@@ -77,30 +86,35 @@ public class ErrorHandlingDemoTests : PageTest
         await ShowCaptionAsync("①「400を発火」ボタンをクリックします（ValidationException）");
         await HighlightAndClickAsync("button[onclick=\"callApi('validation')\"]");
         await Page.WaitForSelectorAsync("#result-area", new PageWaitForSelectorOptions { State = WaitForSelectorState.Visible });
+        await AssertErrorResponseAsync("400", "VALIDATION_ERROR");
         await ShowCaptionAsync("複数フィールドのバリデーションエラーをまとめて返します", 2000);
 
         // NotFoundException
         await ShowCaptionAsync("②「404を発火」ボタンをクリックします（NotFoundException）");
         await HighlightAndClickAsync("button[onclick=\"callApi('not-found')\"]");
         await Page.WaitForTimeoutAsync(500);
+        await AssertErrorResponseAsync("404", "NOT_FOUND");
         await ShowCaptionAsync("resourceType・resourceId を含むエラーレスポンスを返します", 2000);
 
         // BusinessRuleException
         await ShowCaptionAsync("③「400を発火」ボタンをクリックします（BusinessRuleException）");
         await HighlightAndClickAsync("button[onclick=\"callApi('business-rule')\"]");
         await Page.WaitForTimeoutAsync(500);
+        await AssertErrorResponseAsync("400", "BUSINESS_RULE_VIOLATION");
         await ShowCaptionAsync("与信限度額超過など、技術的には正常でもルール違反の場合です", 2000);
 
         // InfrastructureException
         await ShowCaptionAsync("④「500を発火」ボタンをクリックします（InfrastructureException）");
         await HighlightAndClickAsync("button[onclick=\"callApi('infrastructure')\"]");
         await Page.WaitForTimeoutAsync(500);
+        await AssertErrorResponseAsync("500", "INFRASTRUCTURE_ERROR");
         await ShowCaptionAsync("DB・外部API障害など、システム起因のエラーです", 2000);
 
         // 予期しない例外
         await ShowCaptionAsync("⑤「500を発火」ボタンをクリックします（予期しない例外）");
         await HighlightAndClickAsync("button[onclick=\"callApi('unexpected')\"]");
         await Page.WaitForTimeoutAsync(500);
+        await AssertErrorResponseAsync("500", "INTERNAL_ERROR");
         await ShowCaptionAsync("NullReferenceException 等の予期しないエラーも一括ハンドリングします", 2000);
 
         await Page.EvaluateAsync("window.scrollTo(0, document.body.scrollHeight / 2)");
