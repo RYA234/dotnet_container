@@ -21,7 +21,7 @@ public class FullScanController : Controller
         return View("~/Features/Demo/FullScan/Views/FullScan.cshtml");
     }
 
-    [HttpPost("api/demo/full-scan/setup")]
+    [HttpPost("/api/demo/full-scan/setup")]
     public async Task<IActionResult> FullScanSetup()
     {
         try
@@ -36,7 +36,7 @@ public class FullScanController : Controller
         }
     }
 
-    [HttpGet("api/demo/full-scan/without-index")]
+    [HttpGet("/api/demo/full-scan/without-index")]
     public async Task<IActionResult> FullScanWithoutIndex([FromQuery] string? email)
     {
         if (string.IsNullOrEmpty(email))
@@ -54,7 +54,7 @@ public class FullScanController : Controller
         }
     }
 
-    [HttpPost("api/demo/full-scan/create-index")]
+    [HttpPost("/api/demo/full-scan/create-index")]
     public async Task<IActionResult> FullScanCreateIndex()
     {
         try
@@ -69,7 +69,7 @@ public class FullScanController : Controller
         }
     }
 
-    [HttpGet("api/demo/full-scan/with-index")]
+    [HttpGet("/api/demo/full-scan/with-index")]
     public async Task<IActionResult> FullScanWithIndex([FromQuery] string? email)
     {
         if (string.IsNullOrEmpty(email))

@@ -21,7 +21,7 @@ public class LikeSearchController : Controller
         return View("~/Features/Demo/LikeSearch/Views/LikeSearch.cshtml");
     }
 
-    [HttpPost("api/demo/like-search/setup")]
+    [HttpPost("/api/demo/like-search/setup")]
     public async Task<IActionResult> LikeSearchSetup()
     {
         try
@@ -36,7 +36,7 @@ public class LikeSearchController : Controller
         }
     }
 
-    [HttpGet("api/demo/like-search/prefix")]
+    [HttpGet("/api/demo/like-search/prefix")]
     public async Task<IActionResult> LikeSearchPrefix([FromQuery] string? keyword)
     {
         if (string.IsNullOrEmpty(keyword))
@@ -54,7 +54,7 @@ public class LikeSearchController : Controller
         }
     }
 
-    [HttpGet("api/demo/like-search/partial")]
+    [HttpGet("/api/demo/like-search/partial")]
     public async Task<IActionResult> LikeSearchPartial([FromQuery] string? keyword)
     {
         if (string.IsNullOrEmpty(keyword))

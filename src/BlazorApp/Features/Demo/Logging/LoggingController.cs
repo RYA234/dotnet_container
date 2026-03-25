@@ -22,7 +22,7 @@ public class LoggingController : Controller
         return View("~/Features/Demo/Logging/Views/Logging.cshtml");
     }
 
-    [HttpGet("api/demo/logging/levels")]
+    [HttpGet("/api/demo/logging/levels")]
     public IActionResult LogAllLevels()
     {
         _loggingDemoService.LogAllLevels();
@@ -33,7 +33,7 @@ public class LoggingController : Controller
         });
     }
 
-    [HttpGet("api/demo/logging/performance")]
+    [HttpGet("/api/demo/logging/performance")]
     public IActionResult LogPerformance([FromQuery] long elapsedMs = 500)
     {
         var result = _loggingDemoService.LogPerformance("SimulatedOperation", elapsedMs);
@@ -49,7 +49,7 @@ public class LoggingController : Controller
         });
     }
 
-    [HttpPost("api/demo/logging/mask")]
+    [HttpPost("/api/demo/logging/mask")]
     public IActionResult LogMask([FromBody] MaskRequest request)
     {
         var masked = _loggingDemoService.MaskAndLog(request.Input);

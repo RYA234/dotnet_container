@@ -22,7 +22,7 @@ public class ValidationController : Controller
         return View("~/Features/Demo/Validation/Views/Validation.cshtml");
     }
 
-    [HttpPost("api/demo/validation/order")]
+    [HttpPost("/api/demo/validation/order")]
     public IActionResult CreateOrder([FromBody] OrderRequest request)
     {
         if (!ModelState.IsValid)
@@ -39,7 +39,7 @@ public class ValidationController : Controller
         return Ok(new { message = "注文が正常に登録されました", customerCode = request.CustomerCode, totalAmount = request.TotalAmount });
     }
 
-    [HttpPost("api/demo/validation/reset")]
+    [HttpPost("/api/demo/validation/reset")]
     public IActionResult ResetValidationDemo()
     {
         ValidationDemoService.Reset();

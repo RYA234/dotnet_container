@@ -21,7 +21,7 @@ public class NPlusController : Controller
         return View("~/Features/Demo/NPlus/Views/Performance.cshtml");
     }
 
-    [HttpGet("api/demo/n-plus-one/bad")]
+    [HttpGet("/api/demo/n-plus-one/bad")]
     public async Task<IActionResult> NPlusOneBad()
     {
         try
@@ -36,7 +36,7 @@ public class NPlusController : Controller
         }
     }
 
-    [HttpGet("api/demo/n-plus-one/good")]
+    [HttpGet("/api/demo/n-plus-one/good")]
     public async Task<IActionResult> NPlusOneGood()
     {
         try

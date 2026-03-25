@@ -21,7 +21,7 @@ public class SelectStarController : Controller
         return View("~/Features/Demo/SelectStar/Views/SelectStar.cshtml");
     }
 
-    [HttpPost("api/demo/select-star/setup")]
+    [HttpPost("/api/demo/select-star/setup")]
     public async Task<IActionResult> SelectStarSetup()
     {
         try
@@ -36,7 +36,7 @@ public class SelectStarController : Controller
         }
     }
 
-    [HttpGet("api/demo/select-star/all-columns")]
+    [HttpGet("/api/demo/select-star/all-columns")]
     public async Task<IActionResult> SelectStarAllColumns()
     {
         try
@@ -51,7 +51,7 @@ public class SelectStarController : Controller
         }
     }
 
-    [HttpGet("api/demo/select-star/specific-columns")]
+    [HttpGet("/api/demo/select-star/specific-columns")]
     public async Task<IActionResult> SelectStarSpecificColumns()
     {
         try

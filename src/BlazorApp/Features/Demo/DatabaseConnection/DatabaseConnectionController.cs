@@ -21,7 +21,7 @@ public class DatabaseConnectionController : Controller
         return View("~/Features/Demo/DatabaseConnection/Views/DatabaseConnection.cshtml");
     }
 
-    [HttpGet("api/demo/db/test")]
+    [HttpGet("/api/demo/db/test")]
     public async Task<IActionResult> DbConnectionTest()
     {
         var result = await _dbConnectionDemoService.TestConnectionAsync();
@@ -35,7 +35,7 @@ public class DatabaseConnectionController : Controller
         });
     }
 
-    [HttpGet("api/demo/db/tables")]
+    [HttpGet("/api/demo/db/tables")]
     public async Task<IActionResult> DbGetTables()
     {
         var tables = await _dbConnectionDemoService.GetTablesAsync();
@@ -48,7 +48,7 @@ public class DatabaseConnectionController : Controller
         });
     }
 
-    [HttpGet("api/demo/db/count")]
+    [HttpGet("/api/demo/db/count")]
     public async Task<IActionResult> DbGetRowCount([FromQuery] string table = "Users")
     {
         var count = await _dbConnectionDemoService.GetRowCountAsync(table);
