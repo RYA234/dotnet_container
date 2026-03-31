@@ -1,76 +1,60 @@
 using System.Diagnostics;
 using System.Data;
+using System.Text;
 using Microsoft.Data.Sqlite;
 using BlazorApp.Features.Demo.DTOs;
 
 namespace BlazorApp.Features.Demo.Services;
 
+/// <summary>
+/// N+1問題デモのサービス実装
+/// </summary>
+/// <remarks>
+/// <para><strong>設計書:</strong> .github/docs/features/n-plus-one-demo/internal-design.md</para>
+/// <para><strong>責務:</strong> N+1問題が発生するBad実装と、JOINで解決したGood実装を比較する</para>
+/// <para><strong>依存関係:</strong></para>
+/// <list type="bullet">
+/// <item><description>IConfiguration: 接続文字列（NPlusOneDemo）取得</description></item>
+/// <item><description>ILogger: 実行時間・クエリ数のログ出力</description></item>
+/// </list>
+/// </remarks>
 public class NPlusOneService : INPlusOneService
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<NPlusOneService> _logger;
+
+    /// <summary>現在の処理中に発行したSQLクエリ数。GetUsersBad/GetUsersGood の各呼び出しで0にリセットされる</summary>
     private int _sqlQueryCount;
 
+    /// <summary>
+    /// コンストラクタ
+    /// </summary>
+    /// <param name="configuration">接続文字列を含む設定</param>
+    /// <param name="logger">ロガー</param>
     public NPlusOneService(IConfiguration configuration, ILogger<NPlusOneService> logger)
     {
         _configuration = configuration;
         _logger = logger;
     }
 
-    private SqliteConnection GetConnection()
-    {
-        var connectionString = _configuration.GetConnectionString("NPlusOneDemo");
-        return new SqliteConnection(connectionString);
-    }
-
-    private async Task EnsureDatabaseInitializedAsync(SqliteConnection connection)
-    {
-        var createTables = connection.CreateCommand();
-        createTables.CommandText = @"
-            CREATE TABLE IF NOT EXISTS Departments (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Name TEXT NOT NULL,
-                CreatedAt TEXT DEFAULT (datetime('now'))
-            );
-            CREATE TABLE IF NOT EXISTS Users (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Name TEXT NOT NULL,
-                DepartmentId INTEGER NOT NULL,
-                Email TEXT NOT NULL,
-                CreatedAt TEXT DEFAULT (datetime('now')),
-                FOREIGN KEY (DepartmentId) REFERENCES Departments(Id)
-            );
-            CREATE INDEX IF NOT EXISTS IX_Users_DepartmentId ON Users(DepartmentId);";
-        await createTables.ExecuteNonQueryAsync();
-
-        var countCmd = connection.CreateCommand();
-        countCmd.CommandText = "SELECT COUNT(*) FROM Departments";
-        var count = Convert.ToInt32(await countCmd.ExecuteScalarAsync());
-        if (count > 0) return;
-
-        var seedDepts = connection.CreateCommand();
-        seedDepts.CommandText = @"
-            INSERT INTO Departments (Name) VALUES
-                ('Engineering'), ('Sales'), ('Marketing'), ('HR'), ('Finance');";
-        await seedDepts.ExecuteNonQueryAsync();
-
-        var lastNames = new[] { "田中", "鈴木", "佐藤", "高橋", "伊藤", "渡辺", "山本", "中村", "小林", "加藤",
-                                "吉田", "山田", "佐々木", "山口", "松本", "井上", "木村", "林", "斎藤", "清水" };
-        var firstNames = new[] { "太郎", "花子", "次郎", "美咲", "健一", "恵子", "大輔", "裕子", "隆", "由美" };
-        var values = new System.Text.StringBuilder();
-        for (int i = 1; i <= 100; i++)
-        {
-            var name = lastNames[(i - 1) % lastNames.Length] + firstNames[(i - 1) % firstNames.Length];
-            var deptId = ((i - 1) % 5) + 1;
-            var email = $"user{i:D3}@example.com";
-            if (i > 1) values.Append(',');
-            values.Append($"('{name}', {deptId}, '{email}')");
-        }
-        var seedUsers = connection.CreateCommand();
-        seedUsers.CommandText = $"INSERT INTO Users (Name, DepartmentId, Email) VALUES {values};";
-        await seedUsers.ExecuteNonQueryAsync();
-    }
-
+    /// <summary>
+    /// N+1問題あり: ユーザー取得後にループ内で部署情報を個別取得する（1+N回クエリ）
+    /// </summary>
+    /// <returns>検索結果（ユーザー一覧・クエリ数・処理時間）</returns>
+    /// <remarks>
+    /// <para><strong>アルゴリズム:</strong></para>
+    /// <list type="number">
+    /// <item><description>USERSを全件取得（1回目のクエリ）</description></item>
+    /// <item><description>各ユーザーに対してDepartmentsを個別取得（N回のクエリ）</description></item>
+    /// <item><description>合計 1+N 回のクエリが発行される</description></item>
+    /// </list>
+    /// <para><strong>SQL文（Bad）:</strong></para>
+    /// <code>
+    /// SELECT Id, Name, DepartmentId, Email FROM Users;           -- 1回
+    /// SELECT Id, Name FROM Departments WHERE Id = @DeptId;       -- N回（ユーザー数分）
+    /// </code>
+    /// <para><strong>期待実行時間:</strong> 約10〜50ms（クエリ数が多いためLatencyが累積）</para>
+    /// </remarks>
     public async Task<NPlusOneResponse> GetUsersBad()
     {
         var sw = Stopwatch.StartNew();
@@ -133,6 +117,7 @@ public class NPlusOneService : INPlusOneService
         }
 
         sw.Stop();
+        _logger.LogInformation("NPlusOne bad: {SqlCount} queries, {RowCount} rows, {ExecutionTimeMs}ms", _sqlQueryCount, result.Count, sw.ElapsedMilliseconds);
 
         return new NPlusOneResponse
         {
@@ -145,6 +130,20 @@ public class NPlusOneService : INPlusOneService
         };
     }
 
+    /// <summary>
+    /// N+1問題なし: JOINを使って1回のクエリでユーザーと部署情報を一括取得する
+    /// </summary>
+    /// <returns>検索結果（ユーザー一覧・クエリ数=1・処理時間）</returns>
+    /// <remarks>
+    /// <para><strong>アルゴリズム:</strong> INNER JOINで1回のクエリにより全データを取得する</para>
+    /// <para><strong>SQL文（Good）:</strong></para>
+    /// <code>
+    /// SELECT u.Id, u.Name, u.Email, d.Id AS DeptId, d.Name AS DeptName
+    /// FROM Users u
+    /// INNER JOIN Departments d ON u.DepartmentId = d.Id
+    /// </code>
+    /// <para><strong>期待実行時間:</strong> 約1〜5ms（1クエリで完結）</para>
+    /// </remarks>
     public async Task<NPlusOneResponse> GetUsersGood()
     {
         var sw = Stopwatch.StartNew();
@@ -185,6 +184,7 @@ public class NPlusOneService : INPlusOneService
         }
 
         sw.Stop();
+        _logger.LogInformation("NPlusOne good: {SqlCount} query, {RowCount} rows, {ExecutionTimeMs}ms", _sqlQueryCount, result.Count, sw.ElapsedMilliseconds);
 
         return new NPlusOneResponse
         {
@@ -195,5 +195,73 @@ public class NPlusOneService : INPlusOneService
             Data = result,
             Message = $"最適化済み: 1回のJOINクエリで全データを取得しています"
         };
+    }
+
+    /// <summary>接続文字列からSQLite接続を生成する</summary>
+    private SqliteConnection GetConnection()
+    {
+        var connectionString = _configuration.GetConnectionString("NPlusOneDemo");
+        return new SqliteConnection(connectionString);
+    }
+
+    /// <summary>
+    /// Departments・Usersテーブルが存在しない場合に作成し、初期データをシードする
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>SQL文:</strong></para>
+    /// <code>
+    /// CREATE TABLE IF NOT EXISTS Departments (Id, Name, CreatedAt);
+    /// CREATE TABLE IF NOT EXISTS Users (Id, Name, DepartmentId, Email, CreatedAt);
+    /// CREATE INDEX IF NOT EXISTS IX_Users_DepartmentId ON Users(DepartmentId);
+    /// INSERT INTO Departments (Name) VALUES ('Engineering'), ('Sales'), ...;  -- 5部署
+    /// INSERT INTO Users (Name, DepartmentId, Email) VALUES ...;               -- 100ユーザー
+    /// </code>
+    /// </remarks>
+    private static async Task EnsureDatabaseInitializedAsync(SqliteConnection connection)
+    {
+        var createTables = connection.CreateCommand();
+        createTables.CommandText = @"
+            CREATE TABLE IF NOT EXISTS Departments (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL,
+                CreatedAt TEXT DEFAULT (datetime('now'))
+            );
+            CREATE TABLE IF NOT EXISTS Users (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL,
+                DepartmentId INTEGER NOT NULL,
+                Email TEXT NOT NULL,
+                CreatedAt TEXT DEFAULT (datetime('now')),
+                FOREIGN KEY (DepartmentId) REFERENCES Departments(Id)
+            );
+            CREATE INDEX IF NOT EXISTS IX_Users_DepartmentId ON Users(DepartmentId);";
+        await createTables.ExecuteNonQueryAsync();
+
+        var countCmd = connection.CreateCommand();
+        countCmd.CommandText = "SELECT COUNT(*) FROM Departments";
+        var count = Convert.ToInt32(await countCmd.ExecuteScalarAsync());
+        if (count > 0) return;
+
+        var seedDepts = connection.CreateCommand();
+        seedDepts.CommandText = @"
+            INSERT INTO Departments (Name) VALUES
+                ('Engineering'), ('Sales'), ('Marketing'), ('HR'), ('Finance');";
+        await seedDepts.ExecuteNonQueryAsync();
+
+        var lastNames = new[] { "田中", "鈴木", "佐藤", "高橋", "伊藤", "渡辺", "山本", "中村", "小林", "加藤",
+                                "吉田", "山田", "佐々木", "山口", "松本", "井上", "木村", "林", "斎藤", "清水" };
+        var firstNames = new[] { "太郎", "花子", "次郎", "美咲", "健一", "恵子", "大輔", "裕子", "隆", "由美" };
+        var values = new StringBuilder();
+        for (int i = 1; i <= 100; i++)
+        {
+            var name = lastNames[(i - 1) % lastNames.Length] + firstNames[(i - 1) % firstNames.Length];
+            var deptId = ((i - 1) % 5) + 1;
+            var email = $"user{i:D3}@example.com";
+            if (i > 1) values.Append(',');
+            values.Append($"('{name}', {deptId}, '{email}')");
+        }
+        var seedUsers = connection.CreateCommand();
+        seedUsers.CommandText = $"INSERT INTO Users (Name, DepartmentId, Email) VALUES {values};";
+        await seedUsers.ExecuteNonQueryAsync();
     }
 }
