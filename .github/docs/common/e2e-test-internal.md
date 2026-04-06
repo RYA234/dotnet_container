@@ -50,9 +50,49 @@ BlazorApp.E2ETests/
 
 ---
 
-## 3. Playwright設定
+## 3. テスト実行方法
 
-### 3.1 スクリーンショット
+### 3.1 前提条件
+
+- .NET 10 SDK インストール済み
+- アプリがローカルで起動していること（`http://localhost:5000/dotnet`）
+- Playwrightブラウザが初回インストール済みであること
+
+### 3.2 Playwrightブラウザのインストール（初回のみ）
+
+```bash
+cd BlazorApp.E2ETests
+pwsh bin/Debug/net10.0/.playwright/package/bin/playwright.ps1 install
+```
+
+### 3.3 テスト実行
+
+```bash
+# 全E2Eテストを実行
+dotnet test BlazorApp.E2ETests/
+
+# 特定のテストクラスのみ実行
+dotnet test BlazorApp.E2ETests/ --filter "ClassName=HomePageTests"
+
+# 特定のテストメソッドのみ実行
+dotnet test BlazorApp.E2ETests/ --filter "FullyQualifiedName~HomePage_Loads_Successfully"
+```
+
+### 3.4 出力物の確認
+
+テスト実行後、以下のフォルダに自動生成される。
+
+```
+BlazorApp.E2ETests/bin/Debug/net10.0/
+├── screenshots/    ← スクリーンショット（.png）
+└── videos/         ← 動画（.webm）
+```
+
+---
+
+## 4. Playwright設定
+
+### 4.1 スクリーンショット
 
 各テストのキーポイントで撮影する。
 
@@ -64,7 +104,7 @@ await Page.ScreenshotAsync(new PageScreenshotOptions
 });
 ```
 
-### 3.2 動画録画
+### 4.2 動画録画
 
 テスト開始時にコンテキスト単位で動画録画を有効化する。
 
@@ -80,7 +120,7 @@ var context = await Browser.NewContextAsync(new BrowserNewContextOptions
 - テスト証跡として保管
 - 操作マニュアル素材として再利用（マニュアル手動更新コストをゼロにする）
 
-### 3.3 ベースURL
+### 4.3 ベースURL
 
 ```csharp
 private const string BaseUrl = "http://localhost:5000/dotnet";
@@ -90,9 +130,9 @@ private const string BaseUrl = "http://localhost:5000/dotnet";
 
 ---
 
-## 4. TestContainers構成（未実装・設計）
+## 5. TestContainers構成（未実装・設計）
 
-### 4.1 採用理由
+### 5.1 採用理由
 
 | 比較 | SQLiteインメモリ | TestContainers |
 |------|---------------|---------------|
@@ -102,7 +142,7 @@ private const string BaseUrl = "http://localhost:5000/dotnet";
 
 **E2Eテストでは本番と同じDB環境を使うべき**のため、TestContainersを採用する。
 
-### 4.2 構成イメージ
+### 5.2 構成イメージ
 
 ```
 テスト起動
@@ -113,7 +153,7 @@ private const string BaseUrl = "http://localhost:5000/dotnet";
 → テスト終了後にコンテナを破棄
 ```
 
-### 4.3 実装予定コード
+### 5.3 実装予定コード
 
 ```csharp
 // NuGet: Testcontainers.MsSql
@@ -129,7 +169,7 @@ var connectionString = sqlContainer.GetConnectionString();
 
 ---
 
-## 5. テスト命名規則
+## 6. テスト命名規則
 
 ```
 {画面名}_{操作内容}_{期待結果}
@@ -142,7 +182,7 @@ var connectionString = sqlContainer.GetConnectionString();
 
 ---
 
-## 6. シーケンス図
+## 7. シーケンス図
 
 ```mermaid
 sequenceDiagram
@@ -164,7 +204,7 @@ sequenceDiagram
 
 ---
 
-## 7. CI/CD連携
+## 8. CI/CD連携
 
 ```yaml
 # GitHub Actions（概要）
@@ -183,7 +223,7 @@ sequenceDiagram
 
 ---
 
-## 8. 参考
+## 9. 参考
 
 - [E2Eテスト外部設計書](e2e-test-external.md)
 - [テスト設計（共通）](testing.md)
