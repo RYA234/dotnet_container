@@ -16,6 +16,14 @@
 | Docker Desktop | 最新 | コンテナ起動・TestContainers |
 | Git | 最新 | バージョン管理 |
 
+以下のコマンドでインストール済みか確認する。
+
+```bash
+dotnet --version
+docker -v
+git -v
+```
+
 ---
 
 ## 2. リポジトリのクローン
@@ -81,10 +89,10 @@ dotnet test BlazorApp.Tests/
 アプリが起動していることを確認してから実行する。
 
 ```bash
-# 初回のみ：Playwrightブラウザのインストール
-pwsh BlazorApp.E2ETests/bin/Debug/net10.0/.playwright/package/bin/playwright.ps1 install
-
 # E2Eテスト実行
+dotnet test BlazorApp.E2ETests/BlazorApp.E2ETests.csproj --filter "FullyQualifiedName~ValidationDemo"
+
+# 全件のE2Eテスト実行　時間がかかる....
 dotnet test BlazorApp.E2ETests/
 ```
 
@@ -98,7 +106,7 @@ BlazorApp.E2ETests/bin/Debug/net10.0/
 
 ---
 
-## 6. Supabase接続確認
+## 6. Supabase接続確認（未検証）
 
 アプリ起動後、以下のエンドポイントで接続を確認できる。
 
