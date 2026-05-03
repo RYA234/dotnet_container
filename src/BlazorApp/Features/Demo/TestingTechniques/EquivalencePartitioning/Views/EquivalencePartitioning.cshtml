@@ -1,0 +1,233 @@
+@{
+    ViewData["Title"] = "同値分割デモ";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-2">同値分割デモ</h1>
+    <p class="lead">年齢入力を例に、同値クラスに分けてテストケースを生成・実行するデモ</p>
+
+    <!-- 概念説明 -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h4 mb-0">同値分割法とは</h2>
+        </div>
+        <div class="card-body">
+            <p>
+                入力値を「同じ結果を返すグループ（同値クラス）」に分割し、各クラスから代表値を1つ選んでテストする手法。
+                同じクラス内の値は同じ結果になるため、代表値1つでクラス全体をテストできる。
+            </p>
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="text-danger">テストなし（全パターン）</h5>
+                    <pre class="bg-light p-3 rounded small"><code>// 年齢が 0〜150 なら 151 通りのテストが必要
+// -1, 0, 1, 2, 3 ... 148, 149, 150, 151, ...</code></pre>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="text-success">同値分割（代表値のみ）</h5>
+                    <pre class="bg-light p-3 rounded small"><code>// 同じ結果のクラスから代表値を1つ選ぶだけ
+// -1（無効）, 6（子供）, 30（一般）, 70（シニア）
+// → 4通りで全クラスをカバー</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 同値クラス一覧 -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h2 class="h4 mb-0">同値クラス一覧</h2>
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>クラス</th>
+                        <th>範囲</th>
+                        <th>区分</th>
+                        <th>代表値</th>
+                        <th>有効/無効</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="table-danger">
+                        <td>無効クラス（負）</td>
+                        <td>0未満</td>
+                        <td>エラー</td>
+                        <td>-1</td>
+                        <td><span class="badge bg-danger">無効</span></td>
+                    </tr>
+                    <tr class="table-success">
+                        <td>有効クラス（子供）</td>
+                        <td>0〜12</td>
+                        <td>子供</td>
+                        <td>6</td>
+                        <td><span class="badge bg-success">有効</span></td>
+                    </tr>
+                    <tr class="table-success">
+                        <td>有効クラス（一般）</td>
+                        <td>13〜64</td>
+                        <td>一般</td>
+                        <td>30</td>
+                        <td><span class="badge bg-success">有効</span></td>
+                    </tr>
+                    <tr class="table-success">
+                        <td>有効クラス（シニア）</td>
+                        <td>65以上</td>
+                        <td>シニア</td>
+                        <td>70</td>
+                        <td><span class="badge bg-success">有効</span></td>
+                    </tr>
+                    <tr class="table-danger">
+                        <td>無効クラス（非数値）</td>
+                        <td>数値以外</td>
+                        <td>エラー</td>
+                        <td>"abc"</td>
+                        <td><span class="badge bg-danger">無効</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 手動判定フォーム -->
+    <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h2 class="h4 mb-0">年齢を入力して判定</h2>
+        </div>
+        <div class="card-body">
+            <div class="row g-3 align-items-end mb-3">
+                <div class="col-auto">
+                    <label for="ageInput" class="form-label fw-bold">年齢</label>
+                    <input type="number" id="ageInput" class="form-control" placeholder="例: 30" value="30" style="width:120px;">
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-primary" onclick="classify()">判定実行</button>
+                </div>
+            </div>
+            <div id="classifyResult"></div>
+        </div>
+    </div>
+
+    <!-- バッチテスト -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h2 class="h4 mb-0">テストケース自動生成（各クラスの代表値で一括実行）</h2>
+            <button class="btn btn-sm btn-outline-light" onclick="runBatchTest()">自動実行</button>
+        </div>
+        <div class="card-body">
+            <p class="text-muted">各同値クラスの代表値（-1, 6, 30, 70）でまとめてAPIを呼び出し、結果を検証します。</p>
+            <div id="batchResult"></div>
+        </div>
+    </div>
+
+    <!-- GitHubリンク -->
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h2 class="h4 mb-0">🔗 GitHubリンク</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>💻 ソースコード</h6>
+                    <ul class="list-unstyled small">
+                        <li><a href="https://github.com/RYA234/dotnet_container/blob/main/src/BlazorApp/Features/Demo/TestingTechniques/EquivalencePartitioning/EquivalencePartitioningController.cs" target="_blank">EquivalencePartitioningController.cs</a></li>
+                        <li><a href="https://github.com/RYA234/dotnet_container/blob/main/src/BlazorApp/Features/Demo/TestingTechniques/EquivalencePartitioning/Services/EquivalencePartitioningService.cs" target="_blank">EquivalencePartitioningService.cs</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>📄 設計書</h6>
+                    <ul class="list-unstyled small">
+                        <li><a href="https://github.com/RYA234/dotnet_container/blob/main/.github/docs/features/Testing_techniques/01-equivalence-partitioning/external-design.md" target="_blank">external-design.md</a></li>
+                        <li><a href="https://github.com/RYA234/dotnet_container/blob/main/.github/docs/features/Testing_techniques/01-equivalence-partitioning/internal-design.md" target="_blank">internal-design.md</a></li>
+                        <li><a href="https://github.com/RYA234/dotnet_container/blob/main/.github/docs/features/Testing_techniques/01-equivalence-partitioning/test-cases.md" target="_blank">test-cases.md</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="~/Demo/Index" class="btn btn-outline-primary">← デモ一覧に戻る</a>
+    </div>
+</div>
+
+<script>
+async function classify() {
+    const age = document.getElementById('ageInput').value;
+    const resultDiv = document.getElementById('classifyResult');
+    resultDiv.innerHTML = '<p class="text-muted">判定中...</p>';
+
+    try {
+        const url = age !== '' ? `/api/demo/testing/equivalence?age=${age}` : '/api/demo/testing/equivalence';
+        const response = await fetch(url);
+        const data = await response.json();
+
+        const badgeClass = data.isValid ? 'bg-success' : 'bg-danger';
+        const borderClass = data.isValid ? 'border-success' : 'border-danger';
+
+        resultDiv.innerHTML = `
+            <div class="alert alert-${data.isValid ? 'success' : 'danger'} mt-2">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge ${badgeClass} fs-6">${escapeHtml(data.category)}</span>
+                    <span class="text-muted small">${escapeHtml(data.equivalenceClass)}</span>
+                </div>
+                <p class="mb-0">${escapeHtml(data.description)}</p>
+            </div>`;
+    } catch (e) {
+        resultDiv.innerHTML = `<div class="alert alert-danger">通信エラー: ${e.message}</div>`;
+    }
+}
+
+async function runBatchTest() {
+    const resultDiv = document.getElementById('batchResult');
+    resultDiv.innerHTML = '<p class="text-muted">実行中...</p>';
+
+    try {
+        const response = await fetch('/api/demo/testing/equivalence/batch', { method: 'POST' });
+        const cases = await response.json();
+
+        const allPassed = cases.every(c => c.passed);
+        const passCount = cases.filter(c => c.passed).length;
+
+        let html = `
+            <div class="alert alert-${allPassed ? 'success' : 'danger'} mb-3">
+                ${allPassed ? '✅' : '❌'} ${passCount}/${cases.length} 件合格
+            </div>
+            <table class="table table-bordered table-sm">
+                <thead class="table-dark">
+                    <tr>
+                        <th>入力値</th>
+                        <th>同値クラス</th>
+                        <th>期待値</th>
+                        <th>実際の結果</th>
+                        <th>合否</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        for (const c of cases) {
+            const rowClass = c.passed ? 'table-success' : 'table-danger';
+            html += `
+                <tr class="${rowClass}">
+                    <td>${c.inputAge}</td>
+                    <td>${escapeHtml(c.equivalenceClass)}</td>
+                    <td>${escapeHtml(c.expectedCategory)}</td>
+                    <td>${escapeHtml(c.actualCategory)}</td>
+                    <td>${c.passed ? '✅' : '❌'}</td>
+                </tr>`;
+        }
+        html += '</tbody></table>';
+        resultDiv.innerHTML = html;
+    } catch (e) {
+        resultDiv.innerHTML = `<div class="alert alert-danger">通信エラー: ${e.message}</div>`;
+    }
+}
+
+function escapeHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+</script>

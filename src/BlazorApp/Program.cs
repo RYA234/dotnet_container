@@ -1,6 +1,7 @@
 using DotNetEnv;
 using BlazorApp.Features.Supabase.Services;
 using BlazorApp.Features.Demo.Services;
+using BlazorApp.Features.Demo.TestingTechniques.EquivalencePartitioning.Services;
 using BlazorApp.Middleware;
 using BlazorApp.Shared.Data;
 using Amazon.SecretsManager;
@@ -113,6 +114,9 @@ var sqliteConnectionString = builder.Configuration.GetConnectionString("DemoSQLi
 builder.Services.AddSingleton<IDbConnectionFactory>(sp =>
     new SqliteConnectionFactory(sqliteConnectionString, sp.GetRequiredService<ILogger<SqliteConnectionFactory>>()));
 builder.Services.AddScoped<IDatabaseConnectionDemoService, DatabaseConnectionDemoService>();
+
+// テスト技法デモ
+builder.Services.AddScoped<IEquivalencePartitioningService, EquivalencePartitioningService>();
 
 var app = builder.Build();
 
