@@ -19,7 +19,7 @@ public class FullScanServiceTests : IDisposable
 
     public FullScanServiceTests()
     {
-        _connectionString = "Data Source=FullScanTest;Mode=Memory;Cache=Shared";
+        _connectionString = $"Data Source=FullScanTest_{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
 
         _sharedConnection = new SqliteConnection(_connectionString);
         _sharedConnection.Open();
