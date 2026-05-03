@@ -1,14 +1,7 @@
 using DotNetEnv;
 using BlazorApp.Features.Supabase.Services;
 using BlazorApp.Features.Demo.Services;
-using BlazorApp.Features.Demo.DesignPattern.FactoryMethod.Notifiers;
-using BlazorApp.Features.Demo.DesignPattern.Observer.Observers;
-using BlazorApp.Features.Demo.DesignPattern.Repository.Repositories;
-using BlazorApp.Features.Demo.DesignPattern.Strategy.Strategies;
-using BlazorApp.Features.Demo.DesignPattern.Command.Commands;
-using BlazorApp.Features.Demo.DesignPattern.Decorator.Services;
 using BlazorApp.Features.Demo.TestingTechniques.EquivalencePartitioning.Services;
-using Microsoft.Extensions.Caching.Memory;
 using BlazorApp.Middleware;
 using BlazorApp.Shared.Data;
 using Amazon.SecretsManager;
@@ -121,25 +114,6 @@ var sqliteConnectionString = builder.Configuration.GetConnectionString("DemoSQLi
 builder.Services.AddSingleton<IDbConnectionFactory>(sp =>
     new SqliteConnectionFactory(sqliteConnectionString, sp.GetRequiredService<ILogger<SqliteConnectionFactory>>()));
 builder.Services.AddScoped<IDatabaseConnectionDemoService, DatabaseConnectionDemoService>();
-
-// デザインパターンデモ
-builder.Services.AddMemoryCache();
-builder.Services.AddScoped<ProductService>();
-builder.Services.AddScoped<BadProductService>();
-builder.Services.AddScoped<IProductService>(sp =>
-{
-    var inner = sp.GetRequiredService<ProductService>();
-    var logged = new LoggingProductDecorator(inner, sp.GetRequiredService<ILogger<LoggingProductDecorator>>());
-    return new CachingProductDecorator(logged, sp.GetRequiredService<IMemoryCache>());
-});
-builder.Services.AddScoped<INotifierFactory, NotifierFactory>();
-builder.Services.AddScoped<IOrderObserver, EmailOrderObserver>();
-builder.Services.AddScoped<IOrderObserver, InventoryOrderObserver>();
-builder.Services.AddScoped<IOrderObserver, LogOrderObserver>();
-builder.Services.AddScoped<OrderEventPublisher>();
-builder.Services.AddSingleton<IProductRepository, InMemoryProductRepository>();
-builder.Services.AddScoped<IDiscountStrategyFactory, DiscountStrategyFactory>();
-builder.Services.AddSingleton<CommandHistory>();
 
 // テスト技法デモ
 builder.Services.AddScoped<IEquivalencePartitioningService, EquivalencePartitioningService>();
