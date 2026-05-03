@@ -152,13 +152,16 @@
 </div>
 
 <script>
+// ページURLから /Demo/ 以前のパスをベースとして抽出（本番: /dotnet, 開発: 空文字）
+const BASE = window.location.pathname.replace(/\/Demo\/.*$/, '');
+
 async function classify() {
     const age = document.getElementById('ageInput').value;
     const resultDiv = document.getElementById('classifyResult');
     resultDiv.innerHTML = '<p class="text-muted">判定中...</p>';
 
     try {
-        const url = age !== '' ? `/api/demo/testing/equivalence?age=${age}` : '/api/demo/testing/equivalence';
+        const url = age !== '' ? `${BASE}/api/demo/testing/equivalence?age=${age}` : `${BASE}/api/demo/testing/equivalence`;
         const response = await fetch(url);
         const data = await response.json();
 
@@ -183,7 +186,7 @@ async function runBatchTest() {
     resultDiv.innerHTML = '<p class="text-muted">実行中...</p>';
 
     try {
-        const response = await fetch('/api/demo/testing/equivalence/batch', { method: 'POST' });
+        const response = await fetch(`${BASE}/api/demo/testing/equivalence/batch`, { method: 'POST' });
         const cases = await response.json();
 
         const allPassed = cases.every(c => c.passed);
